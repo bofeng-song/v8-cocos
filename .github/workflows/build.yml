@@ -51,6 +51,11 @@ jobs:
           wget https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-amd64/+/latest -O ./gn.zip
           unzip gn.zip -d buildtools/mac/
 
+      - name: set python
+        run: |
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
+          ${{ env.DEPOT_TOOLS_PATH }}/update_depot_tools
+
       - name: Install dsymutil
         run: |
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
