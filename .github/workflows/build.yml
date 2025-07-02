@@ -72,7 +72,7 @@ jobs:
           ln -s ${NINJA_PATH} ${CURRENT_DIR}/third_party/ninja/ninja
 
       - name: Build ${{ matrix.arch }}
-        working-directory: ./v8-cocos
+        working-directory: ./
         run: |
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           which gn
