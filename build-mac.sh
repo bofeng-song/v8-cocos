@@ -19,7 +19,6 @@ fi
 
 # If there is 1 argument and its value is "arm64" or "x64", continue with the rest of the script
 echo "Valid architecture: ${ARCH}"
-echo $PWD
 
 XCODE_DEVELOPER_PATH=$(xcode-select -p)
 
@@ -46,6 +45,6 @@ v8_enable_webassembly=true
 use_cxx17=true
 v8_enable_sandbox=false"
 
-gn --root=../ gen out/mac --args="${ARGS}"
+gn gen out/mac --args="${ARGS}"
 
 ninja -C out/mac v8_monolith d8 -v

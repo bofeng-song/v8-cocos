@@ -55,7 +55,7 @@ jobs:
         run: |
           OLD_PWD=$(pwd)
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
-          ${{ env.DEPOT_TOOLS_PATH }}/update_depot_tools
+          ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
           cd "$OLD_PWD"
 
       - name: Install dsymutil
