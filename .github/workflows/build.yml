@@ -73,6 +73,7 @@ jobs:
 
       - name: Build ${{ matrix.arch }}
         run: |
+          working-directory: ./v8-cocos
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           which gn
           CURRENT_DIR=$(pwd)
