@@ -53,7 +53,8 @@ jobs:
 
       - name: set python
         run: |
-          ${{ env.DEPOT_TOOLS_PATH }}/update_depot_tools
+          export DEPOT_TOOLS_UPDATE=0
+          ./depot_tools/update_depot_tools
 
       - name: Install dsymutil
         run: |
