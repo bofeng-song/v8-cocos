@@ -53,10 +53,8 @@ jobs:
 
       - name: set python
         run: |
-          OLD_PWD=$(pwd)
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
-          cd "$OLD_PWD"
 
       - name: Install dsymutil
         run: |
@@ -72,7 +70,6 @@ jobs:
           ln -s ${NINJA_PATH} ${CURRENT_DIR}/third_party/ninja/ninja
 
       - name: Build ${{ matrix.arch }}
-        working-directory: ./
         run: |
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           which gn
