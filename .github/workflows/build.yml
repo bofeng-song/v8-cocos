@@ -55,7 +55,6 @@ jobs:
         run: |
           OLD_PWD=$(pwd)
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
-          export DEPOT_TOOLS_UPDATE=0
           ${{ env.DEPOT_TOOLS_PATH }}/update_depot_tools
           cd "$OLD_PWD"
 
