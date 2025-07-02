@@ -19,6 +19,7 @@ fi
 
 # If there is 1 argument and its value is "arm64" or "x64", continue with the rest of the script
 echo "Valid architecture: ${ARCH}"
+echo "pwd===: ${pwd}"
 
 XCODE_DEVELOPER_PATH=$(xcode-select -p)
 
