@@ -4,10 +4,12 @@
 
 #include "src/heap/collection-barrier.h"
 
+#include <memory>
+
 #include "src/base/platform/mutex.h"
 #include "src/base/platform/time.h"
 #include "src/common/globals.h"
-#include "src/execution/isolate.h"
+#include "src/execution/isolate-inl.h"
 #include "src/handles/handles.h"
 #include "src/heap/heap-inl.h"
 #include "src/heap/heap.h"
@@ -51,7 +53,12 @@ class BackgroundCollectionInterruptTask : public CancelableTask {
 
  private:
   // v8::internal::CancelableTask overrides.
-  void RunInternal() override { heap_->CheckCollectionRequested(); }
+  void RunInternal() override {
+    // Set the current isolate such that trusted pointer tables etc are
+    // available and the cage base is set correctly for multi-cage mode.
+    SetCurrentIsolateScope isolate_scope(heap_->isolate());
+    heap_->CheckCollectionRequested();
+  }
 
   Heap* heap_;
 };
@@ -109,7 +116,7 @@ bool CollectionBarrier::AwaitCollectionBackground(LocalHeap* local_heap) {
   }
 
   bool collection_performed = false;
-  local_heap->BlockWhileParked([this, &collection_performed]() {
+  local_heap->ExecuteWhileParked([this, &collection_performed]() {
     base::MutexGuard guard(&mutex_);
 
     while (block_for_collection_) {

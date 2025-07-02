@@ -91,7 +91,7 @@ class LocalMachineJunitTestRun(test_run.TestRun):
                  'android_resource_apk=%s\n' % resource_apk)
       props = [
           'application = android.app.Application',
-          'sdk = 28',
+          'sdk = 29',
           ('shadows = org.chromium.testing.local.'
            'CustomShadowApplicationPackageManager'),
       ]
@@ -101,6 +101,8 @@ class LocalMachineJunitTestRun(test_run.TestRun):
   def _CreateJvmArgsList(self, for_listing=False, allow_debugging=True):
     # Creates a list of jvm_args (robolectric, code coverage, etc...)
     jvm_args = [
+        # Disable warning about mockito/bytebuddy dynamically adding an agent.
+        '-XX:+EnableDynamicAgentLoading',
         '-Drobolectric.dependency.dir=%s' %
         self._test_instance.robolectric_runtime_deps_dir,
         '-Ddir.source.root=%s' % constants.DIR_SOURCE_ROOT,
@@ -129,7 +131,7 @@ class LocalMachineJunitTestRun(test_run.TestRun):
                                           '%s.exec' % self._test_instance.suite)
       if self._test_instance.coverage_on_the_fly:
         jacoco_agent_path = os.path.join(host_paths.DIR_SOURCE_ROOT,
-                                         'third_party', 'jacoco', 'lib',
+                                         'third_party', 'jacoco', 'cipd', 'lib',
                                          'jacocoagent.jar')
 
         # inclnolocationclasses is false to prevent no class def found error.
@@ -155,7 +157,10 @@ class LocalMachineJunitTestRun(test_run.TestRun):
     return os.path.join(constants.GetOutDirectory(), 'bin', 'helper',
                         self._test_instance.suite)
 
-  def _QueryTestJsonConfig(self, temp_dir, allow_debugging=True):
+  def _QueryTestJsonConfig(self,
+                           temp_dir,
+                           allow_debugging=True,
+                           enable_shadow_allowlist=False):
     json_config_path = os.path.join(temp_dir, 'main_test_config.json')
     cmd = [self._wrapper_path]
     # Allow debugging of test listing when run as:
@@ -166,6 +171,8 @@ class LocalMachineJunitTestRun(test_run.TestRun):
       cmd += ['--jvm-args', '"%s"' % ' '.join(jvm_args)]
     cmd += ['--classpath', self._CreatePropertiesJar(temp_dir)]
     cmd += ['--list-tests', '--json-config', json_config_path]
+    if enable_shadow_allowlist and self._test_instance.shadows_allowlist:
+      cmd += ['--shadows-allowlist', self._test_instance.shadows_allowlist]
     cmd += self._GetFilterArgs()
     subprocess.run(cmd, check=True)
     with open(json_config_path) as f:
@@ -207,7 +214,12 @@ class LocalMachineJunitTestRun(test_run.TestRun):
   def GetTestsForListing(self):
     with tempfile_ext.NamedTemporaryDirectory() as temp_dir:
       json_config = self._QueryTestJsonConfig(temp_dir)
-      return sorted(x['name'] for x in json_config['tests'])
+      ret = []
+      for config in json_config['configs'].values():
+        for class_name, methods in config.items():
+          ret.extend(f'{class_name}.{method}' for method in methods)
+      ret.sort()
+      return ret
 
   # override
   def RunTests(self, results, raw_logs_fh=None):
@@ -219,9 +231,12 @@ class LocalMachineJunitTestRun(test_run.TestRun):
       with open(self._test_instance.json_config) as f:
         json_config = json.load(f)
     else:
-      # TODO(1384204): This step can take 3-4 seconds for chrome_junit_tests.
+      # TODO(crbug.com/40878339): This step can take 3-4 seconds for
+      # chrome_junit_tests.
       try:
-        json_config = self._QueryTestJsonConfig(temp_dir, allow_debugging=False)
+        json_config = self._QueryTestJsonConfig(temp_dir,
+                                                allow_debugging=False,
+                                                enable_shadow_allowlist=True)
       except subprocess.CalledProcessError:
         results.append(_MakeUnknownFailureResult('Filter matched no tests'))
         return
@@ -256,7 +271,7 @@ class LocalMachineJunitTestRun(test_run.TestRun):
     failed_test_logs = {}
     log_lines = []
     current_test = None
-    for line in _RunCommandsAndSerializeOutput(jobs, num_workers):
+    for line in RunCommandsAndSerializeOutput(jobs, num_workers):
       if raw_logs_fh:
         raw_logs_fh.write(line)
       if show_logcat or not _LOGCAT_RE.match(line):
@@ -315,7 +330,8 @@ class LocalMachineJunitTestRun(test_run.TestRun):
 
       print(
           f'To re-run the {len(failed_jobs)} failed shard(s), use: '
-          f'--shard-filter', ','.join(str(j.shard_id) for j in failed_jobs))
+          f'--shards {num_workers} --shard-filter',
+          ','.join(str(j.shard_id) for j in failed_jobs))
 
     test_run_results = base_test_result.TestRunResults()
     test_run_results.AddResults(results_list)
@@ -381,7 +397,7 @@ def _DumpJavaStacks(pid):
   return result.stdout
 
 
-def _RunCommandsAndSerializeOutput(jobs, num_workers):
+def RunCommandsAndSerializeOutput(jobs, num_workers):
   """Runs multiple commands in parallel and yields serialized output lines.
 
   Raises:
@@ -409,7 +425,8 @@ def _RunCommandsAndSerializeOutput(jobs, num_workers):
       s_err = temp_files[idx]
 
     job = jobs[idx]
-    proc = cmd_helper.Popen(job.cmd, stdout=s_out, stderr=s_err)
+    proc = cmd_helper.Popen(job.cmd, stdout=s_out, stderr=s_err,
+                            env=getattr(job, 'env', None))
     # Need to return process so that output can be displayed on stdout
     # in real time.
     if idx == 0:
@@ -446,7 +463,7 @@ def _RunCommandsAndSerializeOutput(jobs, num_workers):
   if timeout_dumps:
     yield '\n'
     yield ('=' * 80) + '\n'
-    yield '\nOne or mord shards timed out.\n'
+    yield '\nOne or more shards timed out.\n'
     yield ('=' * 80) + '\n'
     for i, dump in sorted(timeout_dumps.items()):
       job = jobs[i]

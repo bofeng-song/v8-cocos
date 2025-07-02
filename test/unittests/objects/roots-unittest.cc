@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "src/common/globals.h"
-#include "src/heap/basic-memory-chunk.h"
 #include "src/heap/heap-inl.h"
+#include "src/heap/memory-chunk-metadata.h"
 #include "src/objects/cell.h"
 #include "src/objects/feedback-cell.h"
 #include "src/objects/script.h"
@@ -18,17 +18,16 @@ namespace internal {
 using RootsTest = TestWithIsolate;
 
 namespace {
-AllocationSpace GetSpaceFromObject(Object object) {
+AllocationSpace GetSpaceFromObject(Tagged<Object> object) {
   DCHECK(IsHeapObject(object));
-  BasicMemoryChunk* chunk =
-      BasicMemoryChunk::FromHeapObject(HeapObject::cast(object));
+  MemoryChunk* chunk = MemoryChunk::FromHeapObject(Cast<HeapObject>(object));
   if (chunk->InReadOnlySpace()) return RO_SPACE;
-  return chunk->owner()->identity();
+  return chunk->Metadata()->owner()->identity();
 }
 }  // namespace
 
 #define CHECK_IN_RO_SPACE(type, name, CamelName) \
-  HeapObject name = roots.name();                \
+  Tagged<HeapObject> name = roots.name();        \
   CHECK_EQ(RO_SPACE, GetSpaceFromObject(name));
 
 // The following tests check that all the roots accessible via ReadOnlyRoots are
@@ -60,7 +59,6 @@ bool CanBeInReadOnlySpace(Factory* factory, Handle<Object> object) {
   V(shared_wasm_memories)                 \
   V(materialized_objects)                 \
   V(public_symbol_table)                  \
-  V(retaining_path_targets)               \
   V(serialized_global_proxy_sizes)        \
   V(serialized_objects)                   \
   IF_WASM(V, js_to_wasm_wrappers)         \
@@ -74,9 +72,18 @@ bool CanBeInReadOnlySpace(Factory* factory, Handle<Object> object) {
 #undef INITIALLY_READ_ONLY_ROOT_LIST
 
   // May be promoted to RO space, see read-only-promotion.h.
+  if (IsAccessorInfo(*object)) return true;
+  if (IsFunctionTemplateInfo(*object)) return true;
+  if (IsFunctionTemplateRareData(*object)) return true;
   if (IsSharedFunctionInfo(*object)) return true;
 
   return false;
+}
+
+// Some mutable roots may initially point to undefined until they are properly
+// initialized.
+bool IsUninitialized(DirectHandle<Object> object) {
+  return !IsTrustedObject(*object) && IsUndefined(*object);
 }
 }  // namespace
 
@@ -87,8 +94,8 @@ bool CanBeInReadOnlySpace(Factory* factory, Handle<Object> object) {
   Handle<Object> name = factory->name();                             \
   CHECK_EQ(*name, heap->name());                                     \
   if (IsHeapObject(*name) && !CanBeInReadOnlySpace(factory, name) && \
-      !IsUndefined(*name, i_isolate())) {                            \
-    CHECK_NE(RO_SPACE, GetSpaceFromObject(HeapObject::cast(*name))); \
+      !IsUninitialized(name)) {                                      \
+    CHECK_NE(RO_SPACE, GetSpaceFromObject(Cast<HeapObject>(*name))); \
   }
 
 // The following tests check that all the roots accessible via public Heap

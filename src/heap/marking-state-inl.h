@@ -5,36 +5,50 @@
 #ifndef V8_HEAP_MARKING_STATE_INL_H_
 #define V8_HEAP_MARKING_STATE_INL_H_
 
-#include "src/heap/marking-inl.h"
 #include "src/heap/marking-state.h"
-#include "src/heap/memory-chunk.h"
+// Include the non-inl header before the rest of the headers.
+
+#include "src/heap/marking-inl.h"
+#include "src/heap/mutable-page-metadata.h"
 
 namespace v8 {
 namespace internal {
 
 template <typename ConcreteState, AccessMode access_mode>
 bool MarkingStateBase<ConcreteState, access_mode>::IsMarked(
-    const HeapObject obj) const {
+    const Tagged<HeapObject> obj) const {
   return MarkBit::From(obj).template Get<access_mode>();
 }
 
 template <typename ConcreteState, AccessMode access_mode>
 bool MarkingStateBase<ConcreteState, access_mode>::IsUnmarked(
-    const HeapObject obj) const {
+    const Tagged<HeapObject> obj) const {
   return !IsMarked(obj);
 }
 
 template <typename ConcreteState, AccessMode access_mode>
-bool MarkingStateBase<ConcreteState, access_mode>::TryMark(HeapObject obj) {
+bool MarkingStateBase<ConcreteState, access_mode>::TryMark(
+    Tagged<HeapObject> obj) {
   return MarkBit::From(obj).template Set<access_mode>();
 }
 
 template <typename ConcreteState, AccessMode access_mode>
 bool MarkingStateBase<ConcreteState, access_mode>::TryMarkAndAccountLiveBytes(
-    HeapObject obj) {
+    Tagged<HeapObject> obj) {
   if (TryMark(obj)) {
-    MemoryChunk::FromHeapObject(obj)->IncrementLiveBytesAtomically(
-        ALIGN_TO_ALLOCATION_ALIGNMENT(obj.Size(cage_base())));
+    MutablePageMetadata::FromHeapObject(obj)->IncrementLiveBytesAtomically(
+        ALIGN_TO_ALLOCATION_ALIGNMENT(obj->Size(cage_base())));
+    return true;
+  }
+  return false;
+}
+
+template <typename ConcreteState, AccessMode access_mode>
+bool MarkingStateBase<ConcreteState, access_mode>::TryMarkAndAccountLiveBytes(
+    Tagged<HeapObject> obj, int object_size) {
+  if (TryMark(obj)) {
+    MutablePageMetadata::FromHeapObject(obj)->IncrementLiveBytesAtomically(
+        object_size);
     return true;
   }
   return false;

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits>
+
 #include "src/heap/marking-inl.h"
 
 namespace v8 {
@@ -142,7 +144,7 @@ MarkBit MarkBit::FromForTesting(Address address) {
 }
 
 // static
-MarkBit MarkBit::FromForTesting(HeapObject heap_object) {
+MarkBit MarkBit::FromForTesting(Tagged<HeapObject> heap_object) {
   return MarkingBitmap::MarkBitFromAddress(heap_object.ptr());
 }
 

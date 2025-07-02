@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <limits>
+#include <optional>
 
 #include "src/base/container-utils.h"
 #include "src/base/export-template.h"
@@ -119,27 +120,35 @@ struct Payload_OutlineSet {
 }  // namespace detail
 
 template <typename T>
-std::enable_if_t<std::is_floating_point<T>::value, T> next_smaller(T v) {
+T next_smaller(T v)
+  requires std::is_floating_point_v<T>
+{
   DCHECK(!std::isnan(v));
   DCHECK_LT(-std::numeric_limits<T>::infinity(), v);
   return std::nextafter(v, -std::numeric_limits<T>::infinity());
 }
 
 template <typename T>
-std::enable_if_t<std::is_floating_point<T>::value, T> next_larger(T v) {
+T next_larger(T v)
+  requires std::is_floating_point_v<T>
+{
   DCHECK(!std::isnan(v));
   DCHECK_LT(v, std::numeric_limits<T>::infinity());
   return std::nextafter(v, std::numeric_limits<T>::infinity());
 }
 
 template <typename T>
-std::enable_if_t<std::is_integral<T>::value, T> next_smaller(T v) {
+T next_smaller(T v)
+  requires std::is_integral_v<T>
+{
   DCHECK_LT(std::numeric_limits<T>::min(), v);
   return v - 1;
 }
 
 template <typename T>
-std::enable_if_t<std::is_integral<T>::value, T> next_larger(T v) {
+T next_larger(T v)
+  requires std::is_integral_v<T>
+{
   DCHECK_LT(v, std::numeric_limits<T>::max());
   return v + 1;
 }
@@ -260,8 +269,8 @@ class V8_EXPORT_PRIVATE Type {
 
   // Other functions
   static Type LeastUpperBound(const Type& lhs, const Type& rhs, Zone* zone);
-  static base::Optional<Type> ParseFromString(const std::string_view& str,
-                                              Zone* zone);
+  static std::optional<Type> ParseFromString(const std::string_view& str,
+                                             Zone* zone);
   Handle<TurboshaftType> AllocateOnHeap(Factory* factory) const;
 
  protected:
@@ -311,7 +320,7 @@ class V8_EXPORT_PRIVATE Type {
 static_assert(sizeof(Type) == 24);
 
 template <size_t Bits>
-class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType : public Type {
+class WordType : public Type {
   static_assert(Bits == 32 || Bits == 64);
   friend class Type;
   static constexpr int kMaxInlineSetSize = 2;
@@ -361,17 +370,14 @@ class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType : public Type {
   template <size_t N>
   static WordType Set(const base::SmallVector<word_t, N>& elements,
                       Zone* zone) {
-    return Set(base::Vector<const word_t>{elements.data(), elements.size()},
-               zone);
+    return Set(base::VectorOf(elements), zone);
   }
   static WordType Set(const std::vector<word_t>& elements, Zone* zone) {
-    return Set(base::Vector<const word_t>{elements.data(), elements.size()},
-               zone);
+    return Set(base::VectorOf(elements), zone);
   }
   static WordType Set(const std::initializer_list<word_t>& elements,
                       Zone* zone) {
-    return Set(base::Vector<const word_t>{elements.begin(), elements.size()},
-               zone);
+    return Set(base::VectorOf(elements), zone);
   }
   static WordType Set(base::Vector<const word_t> elements, Zone* zone) {
     DCHECK(detail::is_unique_and_sorted(elements));
@@ -388,6 +394,11 @@ class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType : public Type {
       return WordType{SubKind::kSet, static_cast<uint8_t>(elements.size()), p};
     } else {
       // Allocate storage in the zone.
+#if defined(__GNUC__) && !defined(__clang__)
+      // Work around a spurious GCC-12 warning. The DCHECK above already
+      // checks the right precondition.
+      if (zone == nullptr) return WordType::Any();
+#endif
       Payload_OutlineSet p;
       p.array = zone->AllocateArray<word_t>(elements.size());
       DCHECK_NOT_NULL(p.array);
@@ -440,8 +451,8 @@ class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType : public Type {
                                         set_size());
     }
   }
-  base::Optional<word_t> try_get_constant() const {
-    if (!is_constant()) return base::nullopt;
+  std::optional<word_t> try_get_constant() const {
+    if (!is_constant()) return std::nullopt;
     DCHECK(is_set());
     DCHECK_EQ(set_size(), 1);
     return set_element(0);
@@ -491,8 +502,11 @@ class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType : public Type {
       : Type(KIND, static_cast<uint8_t>(sub_kind), set_size, 0, 0, payload) {}
 };
 
+extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType<32>;
+extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType<64>;
+
 template <size_t Bits>
-class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType : public Type {
+class FloatType : public Type {
   static_assert(Bits == 32 || Bits == 64);
   friend class Type;
   static constexpr int kMaxInlineSetSize = 2;
@@ -556,21 +570,18 @@ class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType : public Type {
   template <size_t N>
   static FloatType Set(const base::SmallVector<float_t, N>& elements,
                        uint32_t special_values, Zone* zone) {
-    return Set(base::Vector<const float_t>{elements.data(), elements.size()},
-               special_values, zone);
+    return Set(base::VectorOf(elements), special_values, zone);
   }
   static FloatType Set(const std::initializer_list<float_t>& elements,
                        uint32_t special_values, Zone* zone) {
-    return Set(base::Vector<const float_t>{elements.begin(), elements.size()},
-               special_values, zone);
+    return Set(base::VectorOf(elements), special_values, zone);
   }
   static FloatType Set(const std::vector<float_t>& elements, Zone* zone) {
     return Set(elements, Special::kNoSpecialValues, zone);
   }
   static FloatType Set(const std::vector<float_t>& elements,
                        uint32_t special_values, Zone* zone) {
-    return Set(base::Vector<const float_t>{elements.data(), elements.size()},
-               special_values, zone);
+    return Set(base::VectorOf(elements), special_values, zone);
   }
   static FloatType Set(base::Vector<const float_t> elements,
                        uint32_t special_values, Zone* zone) {
@@ -703,8 +714,8 @@ class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType : public Type {
     }
   }
   std::pair<float_t, float_t> minmax() const { return {min(), max()}; }
-  base::Optional<float_t> try_get_constant() const {
-    if (!is_constant()) return base::nullopt;
+  std::optional<float_t> try_get_constant() const {
+    if (!is_constant()) return std::nullopt;
     DCHECK(is_set());
     DCHECK_EQ(set_size(), 1);
     return set_element(0);
@@ -791,6 +802,9 @@ class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType : public Type {
   }
 };
 
+extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType<32>;
+extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType<64>;
+
 class TupleType : public Type {
  public:
   static constexpr int kMaxTupleSize = std::numeric_limits<uint8_t>::max();
@@ -825,8 +839,7 @@ class TupleType : public Type {
     return get_payload<Payload>().array[index];
   }
   base::Vector<Type> elements() const {
-    return base::Vector<Type>{get_payload<Payload>().array,
-                              static_cast<size_t>(size())};
+    return {get_payload<Payload>().array, static_cast<size_t>(size())};
   }
 
   // Misc
@@ -912,32 +925,6 @@ struct fast_hash<Type> {
     // return fast_hash_combine(v.header_, v.payload_[0], v.payload_[1]);
   }
 };
-
-// The below exports of the explicitly instantiated template instances produce
-// build errors on v8_linux64_gcc_light_compile_dbg build with
-//
-// error: type attributes ignored after type is already defined
-// [-Werror=attributes] extern template class
-// EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType<32>;
-//
-// No combination of export macros seems to be able to resolve this issue
-// although they seem to work for other classes. A temporary workaround is to
-// disable this warning here locally.
-// TODO(nicohartmann@): Ideally, we would find a better solution than to disable
-// the warning.
-#if V8_CC_GNU
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wattributes"
-#endif  // V8_CC_GNU
-
-extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType<32>;
-extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) WordType<64>;
-extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType<32>;
-extern template class EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) FloatType<64>;
-
-#if V8_CC_GNU
-#pragma GCC diagnostic pop
-#endif  // V8_CC_GNU
 
 }  // namespace v8::internal::compiler::turboshaft
 

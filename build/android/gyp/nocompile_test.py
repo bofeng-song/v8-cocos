@@ -9,7 +9,6 @@ import json
 import os
 import subprocess
 import re
-import sys
 from util import build_utils
 
 _CHROMIUM_SRC = os.path.normpath(os.path.join(__file__, '..', '..', '..', '..'))
@@ -44,6 +43,7 @@ def _run_command(args, cwd=None):
   p = subprocess.Popen(args,
                        stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT,
+                       encoding='utf-8',
                        cwd=cwd)
   pout, _ = p.communicate()
   if p.returncode != 0:
@@ -56,16 +56,16 @@ def _run_command_get_failure_output(args):
   Returns:
       Command output if command fails, None if command succeeds.
   """
-  p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  p = subprocess.Popen(args,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.STDOUT,
+                       encoding='utf-8')
   pout, _ = p.communicate()
 
   if p.returncode == 0:
     return None
 
-  # For Python3 only:
-  if isinstance(pout, bytes) and sys.version_info >= (3, ):
-    pout = pout.decode('utf-8')
-  return '' if pout is None else pout
+  return pout or ''
 
 
 def _copy_and_append_gn_args(src_args_path, dest_args_path, extra_args):
@@ -76,10 +76,11 @@ def _copy_and_append_gn_args(src_args_path, dest_args_path, extra_args):
       dest_args_path: Copy file destination.
       extra_args: Text to append to args.gn after copy.
     """
-  with open(src_args_path) as f_in, open(dest_args_path, 'w') as f_out:
-    f_out.write(f_in.read())
-    f_out.write('\n')
-    f_out.write('\n'.join(extra_args))
+  with open(src_args_path, encoding='utf-8') as f_in:
+    with open(dest_args_path, 'w', encoding='utf-8') as f_out:
+      f_out.write(f_in.read())
+      f_out.write('\n')
+      f_out.write('\n'.join(extra_args))
 
 
 def _find_regex_in_test_failure_output(test_output, regex):
@@ -91,12 +92,6 @@ def _find_regex_in_test_failure_output(test_output, regex):
     Returns:
       Whether the regular expression was found in the part of the test output
       after the 'FAILED' message.
-
-      If the regex does not contain '\n':
-        the first 5 lines after the 'FAILED' message (including the text on the
-        line after the 'FAILED' message) is searched.
-      Otherwise:
-        the entire test output after the 'FAILED' message is searched.
   """
   if test_output is None:
     return False
@@ -108,8 +103,7 @@ def _find_regex_in_test_failure_output(test_output, regex):
   failure_message = test_output[failed_index:]
   if regex.find('\n') >= 0:
     return re.search(regex, failure_message)
-
-  return _search_regex_in_list(failure_message.split('\n')[:5], regex)
+  return _search_regex_in_list(failure_message.split('\n'), regex)
 
 
 def _search_regex_in_list(value, regex):
@@ -149,11 +143,12 @@ def main():
   parser.add_argument('--stamp', help='Path to touch.')
   options = parser.parse_args()
 
-  with open(options.test_configs_path) as f:
+  with open(options.test_configs_path, encoding='utf-8') as f:
     # Escape '\' in '\.' now. This avoids having to do the escaping in the test
     # specification.
     config_text = f.read().replace(r'\.', r'\\.')
     test_configs = json.loads(config_text)
+
 
   if not os.path.exists(options.out_dir):
     os.makedirs(options.out_dir)
@@ -162,8 +157,11 @@ def main():
   extra_gn_args = [
       'enable_android_nocompile_tests = true',
       'treat_warnings_as_errors = true',
-      # GOMA does not work with non-standard output directories.
-      'use_goma = false',
+      # RBE does not work with non-standard output directories.
+      'use_remoteexec = false',
+      'use_reclient = false',
+      # Do not use fast_local_dev_server.py.
+      'android_static_analysis = "on"',
   ]
   _copy_and_append_gn_args(options.gn_args_path, out_gn_args_path,
                            extra_gn_args)

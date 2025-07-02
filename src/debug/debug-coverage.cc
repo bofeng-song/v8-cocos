@@ -14,16 +14,23 @@
 #include "src/execution/isolate.h"
 #include "src/objects/objects.h"
 
+#if V8_ENABLE_WEBASSEMBLY
+#include "src/wasm/names-provider.h"
+#include "src/wasm/string-builder.h"
+#include "src/wasm/wasm-code-coverage.h"
+#endif  // V8_ENABLE_WEBASSEMBLY
+
 namespace v8 {
 namespace internal {
 
 class SharedToCounterMap
-    : public base::TemplateHashMapImpl<SharedFunctionInfo, uint32_t,
-                                       base::KeyEqualityMatcher<Object>,
+    : public base::TemplateHashMapImpl<Tagged<SharedFunctionInfo>, uint32_t,
+                                       base::KeyEqualityMatcher<Tagged<Object>>,
                                        base::DefaultAllocationPolicy> {
  public:
-  using Entry = base::TemplateHashMapEntry<SharedFunctionInfo, uint32_t>;
-  inline void Add(SharedFunctionInfo key, uint32_t count) {
+  using Entry =
+      base::TemplateHashMapEntry<Tagged<SharedFunctionInfo>, uint32_t>;
+  inline void Add(Tagged<SharedFunctionInfo> key, uint32_t count) {
     Entry* entry = LookupOrInsert(key, Hash(key), []() { return 0; });
     uint32_t old_count = entry->value;
     if (UINT32_MAX - count < old_count) {
@@ -33,14 +40,14 @@ class SharedToCounterMap
     }
   }
 
-  inline uint32_t Get(SharedFunctionInfo key) {
+  inline uint32_t Get(Tagged<SharedFunctionInfo> key) {
     Entry* entry = Lookup(key, Hash(key));
     if (entry == nullptr) return 0;
     return entry->value;
   }
 
  private:
-  static uint32_t Hash(SharedFunctionInfo key) {
+  static uint32_t Hash(Tagged<SharedFunctionInfo> key) {
     return static_cast<uint32_t>(key.ptr());
   }
 
@@ -48,7 +55,7 @@ class SharedToCounterMap
 };
 
 namespace {
-int StartPosition(SharedFunctionInfo info) {
+int StartPosition(Tagged<SharedFunctionInfo> info) {
   int start = info->function_token_position();
   if (start == kNoSourcePosition) start = info->StartPosition();
   return start;
@@ -66,12 +73,12 @@ void SortBlockData(std::vector<CoverageBlock>& v) {
   std::sort(v.begin(), v.end(), CompareCoverageBlock);
 }
 
-std::vector<CoverageBlock> GetSortedBlockData(Isolate* isolate,
-                                              SharedFunctionInfo shared) {
+std::vector<CoverageBlock> GetSortedBlockData(
+    Isolate* isolate, Tagged<SharedFunctionInfo> shared) {
   DCHECK(shared->HasCoverageInfo(isolate));
 
-  CoverageInfo coverage_info =
-      CoverageInfo::cast(shared->GetDebugInfo(isolate)->coverage_info());
+  Tagged<CoverageInfo> coverage_info =
+      Cast<CoverageInfo>(shared->GetDebugInfo(isolate)->coverage_info());
 
   std::vector<CoverageBlock> result;
   if (coverage_info->slot_count() == 0) return result;
@@ -379,11 +386,11 @@ void ClampToBinary(CoverageFunction* function) {
   }
 }
 
-void ResetAllBlockCounts(Isolate* isolate, SharedFunctionInfo shared) {
+void ResetAllBlockCounts(Isolate* isolate, Tagged<SharedFunctionInfo> shared) {
   DCHECK(shared->HasCoverageInfo(isolate));
 
-  CoverageInfo coverage_info =
-      CoverageInfo::cast(shared->GetDebugInfo(isolate)->coverage_info());
+  Tagged<CoverageInfo> coverage_info =
+      Cast<CoverageInfo>(shared->GetDebugInfo(isolate)->coverage_info());
 
   for (int i = 0; i < coverage_info->slot_count(); i++) {
     coverage_info->ResetBlockCount(i);
@@ -411,7 +418,7 @@ bool IsBinaryMode(debug::CoverageMode mode) {
 }
 
 void CollectBlockCoverageInternal(Isolate* isolate, CoverageFunction* function,
-                                  SharedFunctionInfo info,
+                                  Tagged<SharedFunctionInfo> info,
                                   debug::CoverageMode mode) {
   DCHECK(IsBlockMode(mode));
 
@@ -469,7 +476,8 @@ void CollectBlockCoverageInternal(Isolate* isolate, CoverageFunction* function,
 }
 
 void CollectBlockCoverage(Isolate* isolate, CoverageFunction* function,
-                          SharedFunctionInfo info, debug::CoverageMode mode) {
+                          Tagged<SharedFunctionInfo> info,
+                          debug::CoverageMode mode) {
   CollectBlockCoverageInternal(isolate, function, info, mode);
 
   // Reset all counters on the DebugInfo to zero.
@@ -477,11 +485,11 @@ void CollectBlockCoverage(Isolate* isolate, CoverageFunction* function,
 }
 
 void PrintBlockCoverage(const CoverageFunction* function,
-                        SharedFunctionInfo info, bool has_nonempty_source_range,
+                        Tagged<SharedFunctionInfo> info,
+                        bool has_nonempty_source_range,
                         bool function_is_relevant) {
   DCHECK(v8_flags.trace_block_coverage);
-  std::unique_ptr<char[]> function_name =
-      function->name->ToCString(DISALLOW_NULLS, ROBUST_STRING_TRAVERSAL);
+  std::unique_ptr<char[]> function_name = function->name->ToCString();
   i::PrintF(
       "Coverage for function='%s', SFI=%p, has_nonempty_source_range=%d, "
       "function_is_relevant=%d\n",
@@ -509,11 +517,11 @@ void CollectAndMaybeResetCounts(Isolate* isolate,
       // Feedback vectors are already listed to prevent losing them to GC.
       DCHECK(IsArrayList(
           *isolate->factory()->feedback_vectors_for_profiling_tools()));
-      Handle<ArrayList> list = Handle<ArrayList>::cast(
+      auto list = Cast<ArrayList>(
           isolate->factory()->feedback_vectors_for_profiling_tools());
-      for (int i = 0; i < list->Length(); i++) {
-        FeedbackVector vector = FeedbackVector::cast(list->Get(i));
-        SharedFunctionInfo shared = vector->shared_function_info();
+      for (int i = 0; i < list->length(); i++) {
+        Tagged<FeedbackVector> vector = Cast<FeedbackVector>(list->get(i));
+        Tagged<SharedFunctionInfo> shared = vector->shared_function_info();
         DCHECK(shared->IsSubjectToDebugging());
         uint32_t count = static_cast<uint32_t>(vector->invocation_count());
         if (reset_count) vector->clear_invocation_count(kRelaxedStore);
@@ -527,11 +535,11 @@ void CollectAndMaybeResetCounts(Isolate* isolate,
       DCHECK_EQ(v8::debug::CoverageMode::kBestEffort, coverage_mode);
       AllowGarbageCollection allow_gc;
       HeapObjectIterator heap_iterator(isolate->heap());
-      for (HeapObject current_obj = heap_iterator.Next();
+      for (Tagged<HeapObject> current_obj = heap_iterator.Next();
            !current_obj.is_null(); current_obj = heap_iterator.Next()) {
         if (!IsJSFunction(current_obj)) continue;
-        JSFunction func = JSFunction::cast(current_obj);
-        SharedFunctionInfo shared = func->shared();
+        Tagged<JSFunction> func = Cast<JSFunction>(current_obj);
+        Tagged<SharedFunctionInfo> shared = func->shared();
         if (!shared->IsSubjectToDebugging()) continue;
         if (!(func->has_feedback_vector() ||
               func->has_closure_feedback_cell_array())) {
@@ -556,7 +564,7 @@ void CollectAndMaybeResetCounts(Isolate* isolate,
       // vector wasn't allocated yet and the function's interrupt budget wasn't
       // updated (i.e. it didn't execute return / jump).
       for (JavaScriptStackFrameIterator it(isolate); !it.done(); it.Advance()) {
-        SharedFunctionInfo shared = it.frame()->function()->shared();
+        Tagged<SharedFunctionInfo> shared = it.frame()->function()->shared();
         if (counter_map->Get(shared) != 0) continue;
         counter_map->Add(shared, 1);
       }
@@ -614,24 +622,102 @@ std::unique_ptr<Coverage> Coverage::CollectBestEffort(Isolate* isolate) {
   return Collect(isolate, v8::debug::CoverageMode::kBestEffort);
 }
 
+#ifdef V8_ENABLE_WEBASSEMBLY
+
+std::unique_ptr<Coverage> Coverage::CollectWasmData(Isolate* isolate) {
+  // Unsupported if jitless mode is enabled at build-time since related
+  // optimizations deactivate invocation count updates.
+  CHECK(!V8_JITLESS_BOOL);
+
+  // Iterate shared function infos of every script and build a mapping
+  // between source ranges and invocation counts.
+  std::unique_ptr<Coverage> result(new Coverage());
+
+  // We cannot allocate inside the iterator, so we temporarily store function
+  // names as std::strings in this vector.
+  std::vector<std::string> function_names;
+  {
+    Script::Iterator script_it(isolate);
+    for (Tagged<Script> script = script_it.Next(); !script.is_null();
+         script = script_it.Next()) {
+      if (script->type() != Script::Type::kWasm) continue;
+
+      // Create and add new script data.
+      result->emplace_back(handle(script, isolate));
+      std::vector<CoverageFunction>* functions = &result->back().functions;
+      const wasm::NativeModule* native_module = script->wasm_native_module();
+      const wasm::WasmModule* wasm_module = native_module->module();
+      const wasm::WasmModuleCoverageData* coverage_data =
+          native_module->coverage_data().get();
+      for (int declared_function_index = 0;
+           declared_function_index <
+           static_cast<int>(coverage_data->function_count());
+           declared_function_index++) {
+        const int function_index =
+            declared_function_index + wasm_module->num_imported_functions;
+        wasm::StringBuilder sb;
+        wasm::NamesProvider names_provider(wasm_module,
+                                           native_module->wire_bytes());
+        names_provider.PrintFunctionName(sb, function_index,
+                                         wasm::NamesProvider::kDevTools);
+        function_names.emplace_back(sb.start(), sb.length());
+        CoverageFunction function(0, 0, 0, isolate->factory()->empty_string());
+        const wasm::WasmFunctionCoverageData* function_coverage =
+            coverage_data->GetFunctionCoverageData(declared_function_index);
+        if (function_coverage) {
+          const base::Vector<const wasm::WasmCodeRange> code_ranges =
+              function_coverage->code_ranges();
+          for (size_t i_code_range = 0; i_code_range < code_ranges.size();
+               i_code_range++) {
+            wasm::WasmCodeRange code_range = code_ranges[i_code_range];
+            const base::Vector<uint32_t> counters =
+                function_coverage->counters();
+            DCHECK_LT(i_code_range, counters.size());
+            function.blocks.emplace_back(code_range.start, code_range.end,
+                                         counters[i_code_range]);
+          }
+        }
+        functions->emplace_back(function);
+      }
+
+      // Remove entries for scripts that have no coverage.
+      if (functions->empty()) result->pop_back();
+    }
+  }
+
+  size_t i_name = 0;
+  for (CoverageScript& script : *result) {
+    for (CoverageFunction& function : script.functions) {
+      function.name = isolate->factory()->InternalizeString(
+          function_names[i_name].c_str(), function_names[i_name].length());
+      i_name++;
+    }
+  }
+  DCHECK_EQ(function_names.size(), i_name);
+
+  return result;
+}
+
+#endif  // V8_ENABLE_WEBASSEMBLY
+
 std::unique_ptr<Coverage> Coverage::Collect(
-    Isolate* isolate, v8::debug::CoverageMode collectionMode) {
+    Isolate* isolate, v8::debug::CoverageMode collection_mode) {
   // Unsupported if jitless mode is enabled at build-time since related
   // optimizations deactivate invocation count updates.
   CHECK(!V8_JITLESS_BOOL);
 
   // Collect call counts for all functions.
   SharedToCounterMap counter_map;
-  CollectAndMaybeResetCounts(isolate, &counter_map, collectionMode);
+  CollectAndMaybeResetCounts(isolate, &counter_map, collection_mode);
 
   // Iterate shared function infos of every script and build a mapping
   // between source ranges and invocation counts.
   std::unique_ptr<Coverage> result(new Coverage());
 
   std::vector<Handle<Script>> scripts;
-  Script::Iterator scriptIt(isolate);
-  for (Script script = scriptIt.Next(); !script.is_null();
-       script = scriptIt.Next()) {
+  Script::Iterator script_it(isolate);
+  for (Tagged<Script> script = script_it.Next(); !script.is_null();
+       script = script_it.Next()) {
     if (script->IsUserJavaScript()) scripts.push_back(handle(script, isolate));
   }
 
@@ -645,7 +731,7 @@ std::unique_ptr<Coverage> Coverage::Collect(
     {
       // Sort functions by start position, from outer to inner functions.
       SharedFunctionInfo::ScriptIterator infos(isolate, *script);
-      for (SharedFunctionInfo info = infos.Next(); !info.is_null();
+      for (Tagged<SharedFunctionInfo> info = infos.Next(); !info.is_null();
            info = infos.Next()) {
         sorted.emplace_back(handle(info, isolate), counter_map.Get(info));
       }
@@ -657,7 +743,7 @@ std::unique_ptr<Coverage> Coverage::Collect(
 
     // Use sorted list to reconstruct function nesting.
     for (const SharedFunctionInfoAndCount& v : sorted) {
-      Handle<SharedFunctionInfo> info = v.info;
+      DirectHandle<SharedFunctionInfo> info = v.info;
       int start = v.start;
       int end = v.end;
       uint32_t count = v.count;
@@ -693,7 +779,7 @@ std::unique_ptr<Coverage> Coverage::Collect(
       }
 
       if (count != 0) {
-        switch (collectionMode) {
+        switch (collection_mode) {
           case v8::debug::CoverageMode::kBlockCount:
           case v8::debug::CoverageMode::kPreciseCount:
             break;
@@ -711,8 +797,8 @@ std::unique_ptr<Coverage> Coverage::Collect(
       Handle<String> name = SharedFunctionInfo::DebugName(isolate, info);
       CoverageFunction function(start, end, count, name);
 
-      if (IsBlockMode(collectionMode) && info->HasCoverageInfo(isolate)) {
-        CollectBlockCoverage(isolate, &function, *info, collectionMode);
+      if (IsBlockMode(collection_mode) && info->HasCoverageInfo(isolate)) {
+        CollectBlockCoverage(isolate, &function, *info, collection_mode);
       }
 
       // Only include a function range if itself or its parent function is
@@ -780,10 +866,10 @@ void Coverage::SelectMode(Isolate* isolate, debug::CoverageMode mode) {
       std::vector<Handle<JSFunction>> funcs_needing_feedback_vector;
       {
         HeapObjectIterator heap_iterator(isolate->heap());
-        for (HeapObject o = heap_iterator.Next(); !o.is_null();
+        for (Tagged<HeapObject> o = heap_iterator.Next(); !o.is_null();
              o = heap_iterator.Next()) {
           if (IsJSFunction(o)) {
-            JSFunction func = JSFunction::cast(o);
+            Tagged<JSFunction> func = Cast<JSFunction>(o);
             if (func->has_closure_feedback_cell_array()) {
               funcs_needing_feedback_vector.push_back(
                   Handle<JSFunction>(func, isolate));
@@ -792,16 +878,16 @@ void Coverage::SelectMode(Isolate* isolate, debug::CoverageMode mode) {
             // If collecting binary coverage, reset
             // SFI::has_reported_binary_coverage to avoid optimizing / inlining
             // functions before they have reported coverage.
-            SharedFunctionInfo shared = SharedFunctionInfo::cast(o);
+            Tagged<SharedFunctionInfo> shared = Cast<SharedFunctionInfo>(o);
             shared->set_has_reported_binary_coverage(false);
           } else if (IsFeedbackVector(o)) {
             // In any case, clear any collected invocation counts.
-            FeedbackVector::cast(o)->clear_invocation_count(kRelaxedStore);
+            Cast<FeedbackVector>(o)->clear_invocation_count(kRelaxedStore);
           }
         }
       }
 
-      for (Handle<JSFunction> func : funcs_needing_feedback_vector) {
+      for (DirectHandle<JSFunction> func : funcs_needing_feedback_vector) {
         IsCompiledScope is_compiled_scope(
             func->shared()->is_compiled_scope(isolate));
         CHECK(is_compiled_scope.is_compiled());

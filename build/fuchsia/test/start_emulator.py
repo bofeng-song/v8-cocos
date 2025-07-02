@@ -1,16 +1,12 @@
-#!/usr/bin/env vpython3
 # Copyright 2022 The Chromium Authors
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Provides a class for managing emulators."""
 
 import argparse
-import logging
-import sys
 
 from contextlib import AbstractContextManager
 
-from common import catch_sigterm, register_log_args, wait_for_sigterm
 from ffx_emulator import FfxEmulator
 
 
@@ -33,10 +29,6 @@ def register_emulator_args(parser: argparse.ArgumentParser,
                                action='store_true',
                                help='Start emulator with graphics.')
     femu_args.add_argument(
-        '--hardware-gpu',
-        action='store_true',
-        help='Use host GPU hardware instead of Swiftshader.')
-    femu_args.add_argument(
         '--product',
         help='Specify a product bundle used for booting the '
         'emulator. Defaults to the terminal product.')
@@ -46,6 +38,12 @@ def register_emulator_args(parser: argparse.ArgumentParser,
     femu_args.add_argument('--everlasting',
                            action='store_true',
                            help='If the emulator should be long-living.')
+    femu_args.add_argument(
+        '--device-spec',
+        help='Configure the virtual device to use. They are usually defined in '
+        'the product-bundle/virtual_devices/manifest.json. If this flag is not '
+        'provided or is an empty string, ffx emu will decide the recommended '
+        'spec.')
 
 
 def create_emulator_from_args(
@@ -53,24 +51,3 @@ def create_emulator_from_args(
     """Helper method for initializing an FfxEmulator class with parsed
     arguments."""
     return FfxEmulator(args)
-
-
-def main():
-    """Stand-alone function for starting an emulator."""
-
-    catch_sigterm()
-    logging.basicConfig(level=logging.INFO)
-    parser = argparse.ArgumentParser()
-    register_emulator_args(parser, True)
-    register_log_args(parser)
-    args = parser.parse_args()
-    with create_emulator_from_args(args) as target_id:
-        logging.info(
-            'Emulator successfully started. You can now run Chrome '
-            'Fuchsia tests with --target-id=%s to target this emulator.',
-            target_id)
-        wait_for_sigterm('shutting down the emulator.')
-
-
-if __name__ == '__main__':
-    sys.exit(main())

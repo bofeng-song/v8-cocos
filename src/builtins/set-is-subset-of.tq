@@ -5,9 +5,10 @@
 namespace collections {
 
 // https://tc39.es/proposal-set-methods/#sec-set.prototype.issubsetof
+@incrementUseCounter('v8::Isolate::kSetMethods')
 transitioning javascript builtin SetPrototypeIsSubsetOf(
-    js-implicit context: NativeContext,
-    receiver: JSAny)(other: JSAny): Boolean {
+    js-implicit context: NativeContext, receiver: JSAny)(
+    other: JSAny): Boolean {
   const methodName: constexpr string = 'Set.prototype.isSubsetOf';
 
   // 1. Let O be the this value.
@@ -16,36 +17,34 @@ transitioning javascript builtin SetPrototypeIsSubsetOf(
   ThrowTypeError(
       MessageTemplate::kIncompatibleMethodReceiver, methodName, receiver);
 
-  const table = Cast<OrderedHashSet>(o.table) otherwise unreachable;
-
   // 3. Let otherRec be ? GetSetRecord(other).
   let otherRec = GetSetRecord(other, methodName);
 
+  const table = NewStableBackingTableWitness(o);
+
   // 4. Let thisSize be the number of elements in O.[[SetData]].
-  const thisSize =
-      LoadOrderedHashTableMetadata(table, kOrderedHashSetNumberOfElementsIndex);
+  const thisSize = table.LoadSize();
 
   // 5. If thisSize > otherRec.[[Size]], return false.
-  if (thisSize > Convert<int32>(otherRec.size)) {
+  if (Convert<Number>(thisSize) > otherRec.size) {
     return False;
   }
 
   // 6. Let index be 0.
-  let thisIter = collections::NewOrderedHashSetIterator(table);
-  let key: JSAny;
 
   try {
     typeswitch (other) {
       case (otherSet: JSSetWithNoCustomIteration): {
         CheckSetRecordHasJSSetMethods(otherRec) otherwise SlowPath;
 
-        const otherTable =
-            Cast<OrderedHashSet>(otherSet.table) otherwise unreachable;
+        const otherTable = NewStableBackingTableWitness(otherSet);
 
+        let thisIter =
+            collections::NewUnmodifiedOrderedHashSetIterator(table.GetTable());
         while (true) {
-          key = thisIter.Next() otherwise Done;
+          const key = thisIter.Next() otherwise Done;
 
-          if (!TableHasKey(otherTable, key)) {
+          if (!otherTable.HasKey(key)) {
             return False;
           }
         }
@@ -53,13 +52,14 @@ transitioning javascript builtin SetPrototypeIsSubsetOf(
       case (otherMap: JSMapWithNoCustomIteration): {
         CheckSetRecordHasJSMapMethods(otherRec) otherwise SlowPath;
 
-        const otherTable =
-            Cast<OrderedHashMap>(otherMap.table) otherwise unreachable;
+        const otherTable = NewStableBackingTableWitness(otherMap);
 
+        let thisIter =
+            collections::NewUnmodifiedOrderedHashSetIterator(table.GetTable());
         while (true) {
-          key = thisIter.Next() otherwise Done;
+          const key = thisIter.Next() otherwise Done;
 
-          if (!TableHasKey(otherTable, key)) {
+          if (!otherTable.HasKey(key)) {
             return False;
           }
         }
@@ -70,9 +70,10 @@ transitioning javascript builtin SetPrototypeIsSubsetOf(
     }
   } label SlowPath {
     // 7. Repeat, while index < thisSize,
+    let thisIter = collections::NewOrderedHashSetIterator(table.GetTable());
     while (true) {
       // a. Let e be O.[[SetData]][index].
-      key = thisIter.Next() otherwise Done;
+      const key = thisIter.Next() otherwise Done;
 
       // b. Set index to index + 1.
       // c. Let inOther be ToBoolean(? Call(otherRec.[[Has]], otherRec.[[Set]],

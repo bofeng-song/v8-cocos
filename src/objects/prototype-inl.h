@@ -6,6 +6,7 @@
 #define V8_OBJECTS_PROTOTYPE_INL_H_
 
 #include "src/objects/prototype.h"
+// Include the non-inl header before the rest of the headers.
 
 #include "src/handles/handles-inl.h"
 #include "src/objects/js-proxy.h"
@@ -15,11 +16,11 @@ namespace v8 {
 namespace internal {
 
 PrototypeIterator::PrototypeIterator(Isolate* isolate,
-                                     Handle<JSReceiver> receiver,
+                                     DirectHandle<JSReceiver> receiver,
                                      WhereToStart where_to_start,
                                      WhereToEnd where_to_end)
     : isolate_(isolate),
-      handle_(receiver),
+      handle_(indirect_handle(receiver, isolate)),
       where_to_end_(where_to_end),
       is_at_end_(false),
       seen_proxies_(0) {
@@ -27,7 +28,8 @@ PrototypeIterator::PrototypeIterator(Isolate* isolate,
   if (where_to_start == kStartAtPrototype) Advance();
 }
 
-PrototypeIterator::PrototypeIterator(Isolate* isolate, JSReceiver receiver,
+PrototypeIterator::PrototypeIterator(Isolate* isolate,
+                                     Tagged<JSReceiver> receiver,
                                      WhereToStart where_to_start,
                                      WhereToEnd where_to_end)
     : isolate_(isolate),
@@ -38,7 +40,7 @@ PrototypeIterator::PrototypeIterator(Isolate* isolate, JSReceiver receiver,
   if (where_to_start == kStartAtPrototype) Advance();
 }
 
-PrototypeIterator::PrototypeIterator(Isolate* isolate, Map receiver_map,
+PrototypeIterator::PrototypeIterator(Isolate* isolate, Tagged<Map> receiver_map,
                                      WhereToEnd where_to_end)
     : isolate_(isolate),
       object_(receiver_map->GetPrototypeChainRootMap(isolate_)->prototype()),
@@ -47,12 +49,13 @@ PrototypeIterator::PrototypeIterator(Isolate* isolate, Map receiver_map,
       seen_proxies_(0) {
   if (!is_at_end_ && where_to_end_ == END_AT_NON_HIDDEN) {
     DCHECK(IsJSReceiver(object_));
-    Map map = JSReceiver::cast(object_)->map();
+    Tagged<Map> map = Cast<JSReceiver>(object_)->map();
     is_at_end_ = !IsJSGlobalProxyMap(map);
   }
 }
 
-PrototypeIterator::PrototypeIterator(Isolate* isolate, Handle<Map> receiver_map,
+PrototypeIterator::PrototypeIterator(Isolate* isolate,
+                                     DirectHandle<Map> receiver_map,
                                      WhereToEnd where_to_end)
     : isolate_(isolate),
       handle_(receiver_map->GetPrototypeChainRootMap(isolate_)->prototype(),
@@ -62,7 +65,7 @@ PrototypeIterator::PrototypeIterator(Isolate* isolate, Handle<Map> receiver_map,
       seen_proxies_(0) {
   if (!is_at_end_ && where_to_end_ == END_AT_NON_HIDDEN) {
     DCHECK(IsJSReceiver(*handle_));
-    Map map = JSReceiver::cast(*handle_)->map();
+    Tagged<Map> map = Cast<JSReceiver>(*handle_)->map();
     is_at_end_ = !IsJSGlobalProxyMap(map);
   }
 }
@@ -73,7 +76,7 @@ bool PrototypeIterator::HasAccess() const {
   DCHECK(!handle_.is_null());
   if (IsAccessCheckNeeded(*handle_)) {
     return isolate_->MayAccess(isolate_->native_context(),
-                               Handle<JSObject>::cast(handle_));
+                               Cast<JSObject>(handle_));
   }
   return true;
 }
@@ -92,10 +95,10 @@ void PrototypeIterator::Advance() {
 }
 
 void PrototypeIterator::AdvanceIgnoringProxies() {
-  Object object = handle_.is_null() ? object_ : *handle_;
-  Map map = HeapObject::cast(object)->map();
+  Tagged<JSPrototype> object = handle_.is_null() ? object_ : *handle_;
+  Tagged<Map> map = object->map();
 
-  HeapObject prototype = map->prototype();
+  Tagged<JSPrototype> prototype = map->prototype();
   is_at_end_ = IsNull(prototype, isolate_) ||
                (where_to_end_ == END_AT_NON_HIDDEN && !IsJSGlobalProxyMap(map));
 
@@ -131,9 +134,16 @@ PrototypeIterator::AdvanceFollowingProxiesIgnoringAccessChecks() {
     isolate_->StackOverflow();
     return false;
   }
-  MaybeHandle<HeapObject> proto =
-      JSProxy::GetPrototype(Handle<JSProxy>::cast(handle_));
-  if (!proto.ToHandle(&handle_)) return false;
+  MaybeDirectHandle<JSPrototype> proto =
+      JSProxy::GetPrototype(Cast<JSProxy>(handle_));
+
+  // TODO(372390038): This can be again simplified when handle_ migrates to a
+  // direct handle.
+  DirectHandle<JSPrototype> proto_direct_handle;
+  bool ok = proto.ToHandle(&proto_direct_handle);
+  handle_ = indirect_handle(proto_direct_handle, isolate_);
+  if (!ok) return false;
+
   is_at_end_ = where_to_end_ == END_AT_NON_HIDDEN || IsNull(*handle_, isolate_);
   return true;
 }

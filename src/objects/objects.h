@@ -34,195 +34,15 @@
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
 
-//
-// Most object types in the V8 JavaScript are described in this file.
-//
-// Inheritance hierarchy:
-// - Object
-//   - Smi          (immediate small integer)
-//   - TaggedIndex  (properly sign-extended immediate small integer)
-//   - HeapObject   (superclass for everything allocated in the heap)
-//     - JSReceiver  (suitable for property access)
-//       - JSObject
-//         - JSArray
-//           - TemplateLiteralObject
-//         - JSArrayBuffer
-//         - JSArrayBufferView
-//           - JSTypedArray
-//           - JSDataView
-//         - JSCollection
-//           - JSSet
-//           - JSMap
-//         - JSCustomElementsObject (may have elements despite empty FixedArray)
-//           - JSSpecialObject (requires custom property lookup handling)
-//             - JSGlobalObject
-//             - JSGlobalProxy
-//             - JSModuleNamespace
-//           - JSPrimitiveWrapper
-//         - JSDate
-//         - JSFunctionOrBoundFunctionOrWrappedFunction
-//           - JSBoundFunction
-//           - JSFunction
-//           - JSWrappedFunction
-//         - JSGeneratorObject
-//         - JSMapIterator
-//         - JSMessageObject
-//         - JSRegExp
-//         - JSSetIterator
-//         - JSShadowRealm
-//         - JSSharedStruct
-//         - JSStringIterator
-//         - JSTemporalCalendar
-//         - JSTemporalDuration
-//         - JSTemporalInstant
-//         - JSTemporalPlainDate
-//         - JSTemporalPlainDateTime
-//         - JSTemporalPlainMonthDay
-//         - JSTemporalPlainTime
-//         - JSTemporalPlainYearMonth
-//         - JSTemporalTimeZone
-//         - JSTemporalZonedDateTime
-//         - JSWeakCollection
-//           - JSWeakMap
-//           - JSWeakSet
-//         - JSCollator            // If V8_INTL_SUPPORT enabled.
-//         - JSDateTimeFormat      // If V8_INTL_SUPPORT enabled.
-//         - JSDisplayNames        // If V8_INTL_SUPPORT enabled.
-//         - JSDurationFormat      // If V8_INTL_SUPPORT enabled.
-//         - JSListFormat          // If V8_INTL_SUPPORT enabled.
-//         - JSLocale              // If V8_INTL_SUPPORT enabled.
-//         - JSNumberFormat        // If V8_INTL_SUPPORT enabled.
-//         - JSPluralRules         // If V8_INTL_SUPPORT enabled.
-//         - JSRelativeTimeFormat  // If V8_INTL_SUPPORT enabled.
-//         - JSSegmenter           // If V8_INTL_SUPPORT enabled.
-//         - JSSegments            // If V8_INTL_SUPPORT enabled.
-//         - JSSegmentIterator     // If V8_INTL_SUPPORT enabled.
-//         - JSV8BreakIterator     // If V8_INTL_SUPPORT enabled.
-//         - WasmExceptionPackage
-//         - WasmTagObject
-//         - WasmGlobalObject
-//         - WasmInstanceObject
-//         - WasmMemoryObject
-//         - WasmModuleObject
-//         - WasmTableObject
-//         - WasmSuspenderObject
-//       - JSProxy
-//     - FixedArrayBase
-//       - ByteArray
-//       - BytecodeArray
-//       - FixedArray
-//         - HashTable
-//           - Dictionary
-//           - StringTable
-//           - StringSet
-//           - CompilationCacheTable
-//           - MapCache
-//         - OrderedHashTable
-//           - OrderedHashSet
-//           - OrderedHashMap
-//         - FeedbackMetadata
-//         - TemplateList
-//         - TransitionArray
-//         - ScopeInfo
-//         - SourceTextModuleInfo
-//         - ScriptContextTable
-//         - ClosureFeedbackCellArray
-//       - FixedDoubleArray
-//     - PrimitiveHeapObject
-//       - BigInt
-//       - HeapNumber
-//       - Name
-//         - String
-//           - SeqString
-//             - SeqOneByteString
-//             - SeqTwoByteString
-//           - SlicedString
-//           - ConsString
-//           - ThinString
-//           - ExternalString
-//             - ExternalOneByteString
-//             - ExternalTwoByteString
-//           - InternalizedString
-//             - SeqInternalizedString
-//               - SeqOneByteInternalizedString
-//               - SeqTwoByteInternalizedString
-//             - ConsInternalizedString
-//             - ExternalInternalizedString
-//               - ExternalOneByteInternalizedString
-//               - ExternalTwoByteInternalizedString
-//         - Symbol
-//       - Oddball
-//         - Null
-//         - Undefined
-//         - Boolean
-//           - True
-//           - False
-//     - Context
-//       - NativeContext
-//     - Cell
-//     - DescriptorArray
-//     - PropertyCell
-//     - PropertyArray
-//     - InstructionStream
-//     - AbstractCode, a wrapper around Code or BytecodeArray
-//     - GcSafeCode, a wrapper around Code
-//     - Map
-//     - Foreign
-//     - SmallOrderedHashTable
-//       - SmallOrderedHashMap
-//       - SmallOrderedHashSet
-//     - SharedFunctionInfo
-//     - Struct
-//       - AccessorInfo
-//       - AsmWasmData
-//       - PromiseReaction
-//       - PromiseCapability
-//       - AccessorPair
-//       - AccessCheckInfo
-//       - InterceptorInfo
-//       - CallHandlerInfo
-//       - EnumCache
-//       - TemplateInfo
-//         - FunctionTemplateInfo
-//         - ObjectTemplateInfo
-//       - Script
-//       - DebugInfo
-//       - BreakPoint
-//       - BreakPointInfo
-//       - CallSiteInfo
-//       - CodeCache
-//       - PropertyDescriptorObject
-//       - PromiseOnStack
-//       - PrototypeInfo
-//       - Microtask
-//         - CallbackTask
-//         - CallableTask
-//         - PromiseReactionJobTask
-//           - PromiseFulfillReactionJobTask
-//           - PromiseRejectReactionJobTask
-//         - PromiseResolveThenableJobTask
-//       - Module
-//         - SourceTextModule
-//         - SyntheticModule
-//       - SourceTextModuleInfoEntry
-//       - StackFrameInfo
-//     - FeedbackCell
-//     - FeedbackVector
-//     - PreparseData
-//     - UncompiledData
-//       - UncompiledDataWithoutPreparseData
-//       - UncompiledDataWithPreparseData
-//     - SwissNameDictionary
-//
-// Formats of Object::ptr_:
-//  Smi:        [31 bit signed int] 0
-//  HeapObject: [32 bit direct pointer] (4 byte aligned) | 01
-
 namespace v8 {
 namespace internal {
 
 struct InliningPosition;
+class LookupIterator;
 class PropertyDescriptorObject;
+class ReadOnlyRoots;
+class RootVisitor;
+class PropertyKey;
 
 // UNSAFE_SKIP_WRITE_BARRIER skips the write barrier.
 // SKIP_WRITE_BARRIER skips the write barrier and asserts that this is safe in
@@ -245,12 +65,14 @@ enum PropertyNormalizationMode {
 // Indicates whether transitions can be added to a source map or not.
 enum TransitionFlag { INSERT_TRANSITION, OMIT_TRANSITION };
 
-// Indicates whether the transition is simple: the target map of the transition
+// Indicates the kind of transition: the target map of the transition
 // either extends the current map with a new property, or it modifies the
-// property that was added last to the current map.
-enum SimpleTransitionFlag {
+// property that was added last to the current map. Otherwise, it can
+// be a prototype transition, or anything else.
+enum TransitionKindFlag {
   SIMPLE_PROPERTY_TRANSITION,
   PROPERTY_TRANSITION,
+  PROTOTYPE_TRANSITION,
   SPECIAL_TRANSITION
 };
 
@@ -302,33 +124,32 @@ ShouldThrow GetShouldThrow(Isolate* isolate, Maybe<ShouldThrow> should_throw);
 // allocation of the C++ vtable.
 // There must only be a single data member in Object: the Address ptr,
 // containing the tagged heap pointer that this Object instance refers to.
-// For a design overview, see https://goo.gl/Ph4CGz.
-class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
+// For a design overview, see:
+// https://docs.google.com/document/d/1_w49sakC1XM1OptjTurBDqO86NE16FH8LwbeUAtrbCo
+class Object : public AllStatic {
  public:
-  constexpr Object() : TaggedImpl(kNullAddress) {}
-  explicit constexpr Object(Address ptr) : TaggedImpl(ptr) {}
-
-  /* For every object, add a `->` operator which returns a pointer to this     \
-     object. This will allow smoother transition between T and Tagged<T>. */
-  Object* operator->() { return this; }
-  const Object* operator->() const { return this; }
-
-  // Whether the object is in the RO heap and the RO heap is shared, or in the
-  // writable shared heap.
-  static V8_INLINE bool InSharedHeap(Tagged<Object> obj);
-
-  static V8_INLINE bool InWritableSharedSpace(Tagged<Object> obj);
-
-  enum class Conversion { kToNumber, kToNumeric };
+  enum class Conversion {
+    kToNumber,  // Number = Smi or HeapNumber
+    kToNumeric  // Numeric = Smi or HeapNumber or BigInt
+  };
 
   // ES6, #sec-isarray.  NOT to be confused with %_IsArray.
   V8_INLINE
-  V8_WARN_UNUSED_RESULT static Maybe<bool> IsArray(Handle<Object> object);
+  V8_WARN_UNUSED_RESULT static Maybe<bool> IsArray(DirectHandle<Object> object);
 
-  // Extract the number.
-  static inline double Number(Tagged<Object> obj);
+  // Extract the double value of a Number (Smi or HeapNumber).
+  static inline double NumberValue(Tagged<Number> obj);
+  static inline double NumberValue(Tagged<Object> obj);
+  static inline double NumberValue(Tagged<HeapNumber> obj);
+  static inline double NumberValue(Tagged<Smi> obj);
   V8_EXPORT_PRIVATE static bool ToInt32(Tagged<Object> obj, int32_t* value);
   static inline bool ToUint32(Tagged<Object> obj, uint32_t* value);
+
+  // ES6 section 7.1.5 ToIntegerOrInfinity
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline Maybe<double> IntegerValue(
+      Isolate* isolate, HandleType<T> input);
 
   static inline Representation OptimalRepresentation(
       Tagged<Object> obj, PtrComprCageBase cage_base);
@@ -345,18 +166,20 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
 
   static inline bool FilterKey(Tagged<Object> obj, PropertyFilter filter);
 
-  static Handle<FieldType> OptimalType(Tagged<Object> obj, Isolate* isolate,
-                                       Representation representation);
+  static DirectHandle<FieldType> OptimalType(Tagged<Object> obj,
+                                             Isolate* isolate,
+                                             Representation representation);
 
-  V8_EXPORT_PRIVATE static Handle<Object> NewStorageFor(
-      Isolate* isolate, Handle<Object> object, Representation representation);
+  V8_EXPORT_PRIVATE static Handle<UnionOf<JSAny, Hole>> NewStorageFor(
+      Isolate* isolate, Handle<UnionOf<JSAny, Hole>> object,
+      Representation representation);
 
   template <AllocationType allocation_type = AllocationType::kYoung,
             typename IsolateT>
-  static Handle<Object> WrapForRead(IsolateT* isolate, Handle<Object> object,
-                                    Representation representation);
+  static Handle<JSAny> WrapForRead(IsolateT* isolate, Handle<JSAny> object,
+                                   Representation representation);
 
-  // Returns true if the object is of the correct type to be used as a
+  // Returns true if the object is of the correct type to be used as an
   // implementation of a JSObject's elements.
   static inline bool HasValidElements(Tagged<Object> obj);
 
@@ -364,18 +187,28 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
   template <typename IsolateT>
   V8_EXPORT_PRIVATE static bool BooleanValue(Tagged<Object> obj,
                                              IsolateT* isolate);
-  static Object ToBoolean(Tagged<Object> obj, Isolate* isolate);
+  static Tagged<Object> ToBoolean(Tagged<Object> obj, Isolate* isolate);
 
   // ES6 section 7.2.11 Abstract Relational Comparison
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static Maybe<ComparisonResult>
-  Compare(Isolate* isolate, Handle<Object> x, Handle<Object> y);
+  Compare(Isolate* isolate, DirectHandle<Object> x, DirectHandle<Object> y);
 
   // ES6 section 7.2.12 Abstract Equality Comparison
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static Maybe<bool> Equals(
-      Isolate* isolate, Handle<Object> x, Handle<Object> y);
+      Isolate* isolate, DirectHandle<Object> x, DirectHandle<Object> y);
 
   // ES6 section 7.2.13 Strict Equality Comparison
-  V8_EXPORT_PRIVATE static bool StrictEquals(Tagged<Object> obj, Object that);
+  V8_EXPORT_PRIVATE static bool StrictEquals(Tagged<Object> obj,
+                                             Tagged<Object> that);
+
+  // TODO(b/42203211): ToObject, ToString and other conversion methods are
+  // templatized by the handle type and by the object type, so that passing a
+  // Handle<T> is not ambiguous when T is a subtype of Object (it could be
+  // implicitly converted both to Handle<Object> and to DirectHandle<Object>).
+  // Here, T should be a subtype of Object, which is enforced by the last
+  // template argument and the similar restriction on Handle's constructor. When
+  // the migration to DirectHandle is complete, these functions can again accept
+  // simply a DirectHandle<Object>.
 
   // ES6 section 7.1.13 ToObject
   // Convert to a JSObject if needed.
@@ -384,106 +217,129 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
   // Passing a non-null method_name allows us to give a more informative
   // error message for those cases where ToObject is being called on
   // the receiver of a built-in method.
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<JSReceiver> ToObject(
-      Isolate* isolate, Handle<Object> object,
-      const char* method_name = nullptr);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<JSReceiver>::MaybeType
+  ToObject(Isolate* isolate, HandleType<T> object,
+           const char* method_name = nullptr);
   V8_WARN_UNUSED_RESULT static MaybeHandle<JSReceiver> ToObjectImpl(
-      Isolate* isolate, Handle<Object> object,
+      Isolate* isolate, DirectHandle<Object> object,
       const char* method_name = nullptr);
 
   // ES6 section 9.2.1.2, OrdinaryCallBindThis for sloppy callee.
-  V8_WARN_UNUSED_RESULT static MaybeHandle<JSReceiver> ConvertReceiver(
-      Isolate* isolate, Handle<Object> object);
+  V8_WARN_UNUSED_RESULT static MaybeDirectHandle<JSReceiver> ConvertReceiver(
+      Isolate* isolate, DirectHandle<Object> object);
 
   // ES6 section 7.1.14 ToPropertyKey
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Name> ToName(
-      Isolate* isolate, Handle<Object> input);
+  template <template <typename> typename HandleType>
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Name>::MaybeType
+  ToName(Isolate* isolate, HandleType<Object> input)
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>);
 
   // ES6 section 7.1.1 ToPrimitive
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToPrimitive(
-      Isolate* isolate, Handle<Object> input,
-      ToPrimitiveHint hint = ToPrimitiveHint::kDefault);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Object>::MaybeType
+  ToPrimitive(Isolate* isolate, HandleType<T> input,
+              ToPrimitiveHint hint = ToPrimitiveHint::kDefault);
 
   // ES6 section 7.1.3 ToNumber
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToNumber(
-      Isolate* isolate, Handle<Object> input);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Number>::MaybeType
+  ToNumber(Isolate* isolate, HandleType<T> input);
 
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToNumeric(
-      Isolate* isolate, Handle<Object> input);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Object>::MaybeType
+  ToNumeric(Isolate* isolate, HandleType<T> input);
 
   // ES6 section 7.1.4 ToInteger
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToInteger(
-      Isolate* isolate, Handle<Object> input);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Number>::MaybeType
+  ToInteger(Isolate* isolate, HandleType<T> input);
 
   // ES6 section 7.1.5 ToInt32
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToInt32(
-      Isolate* isolate, Handle<Object> input);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Number>::MaybeType
+  ToInt32(Isolate* isolate, HandleType<T> input);
 
   // ES6 section 7.1.6 ToUint32
-  V8_WARN_UNUSED_RESULT inline static MaybeHandle<Object> ToUint32(
-      Isolate* isolate, Handle<Object> input);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Number>::MaybeType
+  ToUint32(Isolate* isolate, HandleType<T> input);
 
   // ES6 section 7.1.12 ToString
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<String> ToString(
-      Isolate* isolate, Handle<Object> input);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<String>::MaybeType
+  ToString(Isolate* isolate, HandleType<T> input);
 
-  V8_EXPORT_PRIVATE static MaybeHandle<String> NoSideEffectsToMaybeString(
-      Isolate* isolate, Handle<Object> input);
+  V8_EXPORT_PRIVATE static MaybeDirectHandle<String> NoSideEffectsToMaybeString(
+      Isolate* isolate, DirectHandle<Object> input);
 
-  V8_EXPORT_PRIVATE static Handle<String> NoSideEffectsToString(
-      Isolate* isolate, Handle<Object> input);
+  V8_EXPORT_PRIVATE static DirectHandle<String> NoSideEffectsToString(
+      Isolate* isolate, DirectHandle<Object> input);
 
   // ES6 section 7.1.14 ToPropertyKey
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToPropertyKey(
-      Isolate* isolate, Handle<Object> value);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Object>::MaybeType
+  ToPropertyKey(Isolate* isolate, HandleType<T> value);
 
   // ES6 section 7.1.15 ToLength
   V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToLength(
-      Isolate* isolate, Handle<Object> input);
+      Isolate* isolate, DirectHandle<Object> input);
 
   // ES6 section 7.1.17 ToIndex
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> ToIndex(
-      Isolate* isolate, Handle<Object> input, MessageTemplate error_index);
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  V8_WARN_UNUSED_RESULT static inline typename HandleType<Object>::MaybeType
+  ToIndex(Isolate* isolate, HandleType<T> input, MessageTemplate error_index);
 
   // ES6 section 7.3.9 GetMethod
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> GetMethod(
-      Handle<JSReceiver> receiver, Handle<Name> name);
+  V8_WARN_UNUSED_RESULT static MaybeDirectHandle<Object> GetMethod(
+      Isolate* isolate, DirectHandle<JSReceiver> receiver,
+      DirectHandle<Name> name);
 
   // ES6 section 7.3.17 CreateListFromArrayLike
-  V8_WARN_UNUSED_RESULT static MaybeHandle<FixedArray> CreateListFromArrayLike(
-      Isolate* isolate, Handle<Object> object, ElementTypes element_types);
+  V8_WARN_UNUSED_RESULT static MaybeDirectHandle<FixedArray>
+  CreateListFromArrayLike(Isolate* isolate, DirectHandle<Object> object,
+                          ElementTypes element_types);
 
   // Get length property and apply ToLength.
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> GetLengthFromArrayLike(
-      Isolate* isolate, Handle<JSReceiver> object);
+  V8_WARN_UNUSED_RESULT static MaybeDirectHandle<Object> GetLengthFromArrayLike(
+      Isolate* isolate, DirectHandle<JSReceiver> object);
 
   // ES6 section 12.5.6 The typeof Operator
-  static Handle<String> TypeOf(Isolate* isolate, Handle<Object> object);
+  static Handle<String> TypeOf(Isolate* isolate, DirectHandle<Object> object);
 
   // ES6 section 12.7 Additive Operators
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> Add(Isolate* isolate,
-                                                       Handle<Object> lhs,
-                                                       Handle<Object> rhs);
+  V8_WARN_UNUSED_RESULT static MaybeDirectHandle<Object> Add(
+      Isolate* isolate, Handle<Object> lhs, Handle<Object> rhs);
 
   // ES6 section 12.9 Relational Operators
-  V8_WARN_UNUSED_RESULT static inline Maybe<bool> GreaterThan(Isolate* isolate,
-                                                              Handle<Object> x,
-                                                              Handle<Object> y);
+  V8_WARN_UNUSED_RESULT static inline Maybe<bool> GreaterThan(
+      Isolate* isolate, DirectHandle<Object> x, DirectHandle<Object> y);
   V8_WARN_UNUSED_RESULT static inline Maybe<bool> GreaterThanOrEqual(
-      Isolate* isolate, Handle<Object> x, Handle<Object> y);
-  V8_WARN_UNUSED_RESULT static inline Maybe<bool> LessThan(Isolate* isolate,
-                                                           Handle<Object> x,
-                                                           Handle<Object> y);
+      Isolate* isolate, DirectHandle<Object> x, DirectHandle<Object> y);
+  V8_WARN_UNUSED_RESULT static inline Maybe<bool> LessThan(
+      Isolate* isolate, DirectHandle<Object> x, DirectHandle<Object> y);
   V8_WARN_UNUSED_RESULT static inline Maybe<bool> LessThanOrEqual(
-      Isolate* isolate, Handle<Object> x, Handle<Object> y);
+      Isolate* isolate, DirectHandle<Object> x, DirectHandle<Object> y);
 
   // ES6 section 7.3.19 OrdinaryHasInstance (C, O).
   V8_WARN_UNUSED_RESULT static MaybeHandle<Object> OrdinaryHasInstance(
-      Isolate* isolate, Handle<Object> callable, Handle<Object> object);
+      Isolate* isolate, DirectHandle<JSAny> callable,
+      DirectHandle<JSAny> object);
 
   // ES6 section 12.10.4 Runtime Semantics: InstanceofOperator(O, C)
   V8_WARN_UNUSED_RESULT static MaybeHandle<Object> InstanceOf(
-      Isolate* isolate, Handle<Object> object, Handle<Object> callable);
+      Isolate* isolate, DirectHandle<JSAny> object,
+      DirectHandle<JSAny> callable);
 
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static MaybeHandle<Object>
   GetProperty(LookupIterator* it, bool is_global_reference = false);
@@ -496,86 +352,94 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
   // argument.  These cases are either in accordance with the spec or not
   // covered by it (eg., concerning API callbacks).
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static Maybe<bool> SetProperty(
-      LookupIterator* it, Handle<Object> value, StoreOrigin store_origin,
+      LookupIterator* it, DirectHandle<Object> value, StoreOrigin store_origin,
       Maybe<ShouldThrow> should_throw = Nothing<ShouldThrow>());
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static MaybeHandle<Object>
-  SetProperty(Isolate* isolate, Handle<Object> object, Handle<Name> name,
-              Handle<Object> value,
+  SetProperty(Isolate* isolate, DirectHandle<JSAny> object,
+              DirectHandle<Name> name, DirectHandle<Object> value,
               StoreOrigin store_origin = StoreOrigin::kMaybeKeyed,
               Maybe<ShouldThrow> should_throw = Nothing<ShouldThrow>());
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> SetPropertyOrElement(
-      Isolate* isolate, Handle<Object> object, Handle<Name> name,
-      Handle<Object> value,
-      Maybe<ShouldThrow> should_throw = Nothing<ShouldThrow>(),
-      StoreOrigin store_origin = StoreOrigin::kMaybeKeyed);
+  V8_WARN_UNUSED_RESULT static inline MaybeDirectHandle<Object>
+  SetPropertyOrElement(Isolate* isolate, DirectHandle<JSAny> object,
+                       DirectHandle<Name> name, DirectHandle<Object> value,
+                       Maybe<ShouldThrow> should_throw = Nothing<ShouldThrow>(),
+                       StoreOrigin store_origin = StoreOrigin::kMaybeKeyed);
+  V8_WARN_UNUSED_RESULT static inline MaybeDirectHandle<Object>
+  SetPropertyOrElement(Isolate* isolate, DirectHandle<JSAny> object,
+                       PropertyKey key, DirectHandle<Object> value,
+                       Maybe<ShouldThrow> should_throw = Nothing<ShouldThrow>(),
+                       StoreOrigin store_origin = StoreOrigin::kMaybeKeyed);
 
   V8_WARN_UNUSED_RESULT static Maybe<bool> SetSuperProperty(
-      LookupIterator* it, Handle<Object> value, StoreOrigin store_origin,
+      LookupIterator* it, DirectHandle<Object> value, StoreOrigin store_origin,
       Maybe<ShouldThrow> should_throw = Nothing<ShouldThrow>());
 
   V8_WARN_UNUSED_RESULT static Maybe<bool> CannotCreateProperty(
-      Isolate* isolate, Handle<Object> receiver, Handle<Object> name,
-      Handle<Object> value, Maybe<ShouldThrow> should_throw);
+      Isolate* isolate, DirectHandle<JSAny> receiver, DirectHandle<Object> name,
+      DirectHandle<Object> value, Maybe<ShouldThrow> should_throw);
   V8_WARN_UNUSED_RESULT static Maybe<bool> WriteToReadOnlyProperty(
-      LookupIterator* it, Handle<Object> value,
+      LookupIterator* it, DirectHandle<Object> value,
       Maybe<ShouldThrow> should_throw);
   V8_WARN_UNUSED_RESULT static Maybe<bool> WriteToReadOnlyProperty(
-      Isolate* isolate, Handle<Object> receiver, Handle<Object> name,
-      Handle<Object> value, ShouldThrow should_throw);
+      Isolate* isolate, DirectHandle<JSAny> receiver, DirectHandle<Object> name,
+      DirectHandle<Object> value, ShouldThrow should_throw);
   V8_WARN_UNUSED_RESULT static Maybe<bool> RedefineIncompatibleProperty(
-      Isolate* isolate, Handle<Object> name, Handle<Object> value,
+      Isolate* isolate, DirectHandle<Object> name, DirectHandle<Object> value,
       Maybe<ShouldThrow> should_throw);
   V8_WARN_UNUSED_RESULT static Maybe<bool> SetDataProperty(
-      LookupIterator* it, Handle<Object> value);
+      LookupIterator* it, DirectHandle<Object> value);
   V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static Maybe<bool> AddDataProperty(
-      LookupIterator* it, Handle<Object> value, PropertyAttributes attributes,
-      Maybe<ShouldThrow> should_throw, StoreOrigin store_origin,
+      LookupIterator* it, DirectHandle<Object> value,
+      PropertyAttributes attributes, Maybe<ShouldThrow> should_throw,
+      StoreOrigin store_origin,
       EnforceDefineSemantics semantics = EnforceDefineSemantics::kSet);
 
   V8_WARN_UNUSED_RESULT static Maybe<bool> TransitionAndWriteDataProperty(
-      LookupIterator* it, Handle<Object> value, PropertyAttributes attributes,
-      Maybe<ShouldThrow> should_throw, StoreOrigin store_origin);
+      LookupIterator* it, DirectHandle<Object> value,
+      PropertyAttributes attributes, Maybe<ShouldThrow> should_throw,
+      StoreOrigin store_origin);
 
   V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> GetPropertyOrElement(
-      Isolate* isolate, Handle<Object> object, Handle<Name> name);
+      Isolate* isolate, DirectHandle<JSAny> object, DirectHandle<Name> name);
   V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> GetPropertyOrElement(
-      Handle<Object> receiver, Handle<Name> name, Handle<JSReceiver> holder);
+      Isolate* isolate, DirectHandle<JSAny> object, PropertyKey key);
   V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> GetProperty(
-      Isolate* isolate, Handle<Object> object, Handle<Name> name);
+      Isolate* isolate, DirectHandle<JSAny> object, DirectHandle<Name> name);
 
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> GetPropertyWithAccessor(
+  V8_WARN_UNUSED_RESULT static MaybeHandle<JSAny> GetPropertyWithAccessor(
       LookupIterator* it);
   V8_WARN_UNUSED_RESULT static Maybe<bool> SetPropertyWithAccessor(
-      LookupIterator* it, Handle<Object> value,
+      LookupIterator* it, DirectHandle<Object> value,
       Maybe<ShouldThrow> should_throw);
 
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> GetPropertyWithDefinedGetter(
-      Handle<Object> receiver, Handle<JSReceiver> getter);
+  V8_WARN_UNUSED_RESULT static MaybeHandle<JSAny> GetPropertyWithDefinedGetter(
+      DirectHandle<JSAny> receiver, DirectHandle<JSReceiver> getter);
   V8_WARN_UNUSED_RESULT static Maybe<bool> SetPropertyWithDefinedSetter(
-      Handle<Object> receiver, Handle<JSReceiver> setter, Handle<Object> value,
-      Maybe<ShouldThrow> should_throw);
+      DirectHandle<JSAny> receiver, DirectHandle<JSReceiver> setter,
+      DirectHandle<Object> value, Maybe<ShouldThrow> should_throw);
 
   V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> GetElement(
-      Isolate* isolate, Handle<Object> object, uint32_t index);
+      Isolate* isolate, DirectHandle<JSAny> object, uint32_t index);
 
-  V8_WARN_UNUSED_RESULT static inline MaybeHandle<Object> SetElement(
-      Isolate* isolate, Handle<Object> object, uint32_t index,
-      Handle<Object> value, ShouldThrow should_throw);
+  V8_WARN_UNUSED_RESULT static inline MaybeDirectHandle<Object> SetElement(
+      Isolate* isolate, DirectHandle<JSAny> object, uint32_t index,
+      DirectHandle<Object> value, ShouldThrow should_throw);
 
   // Returns the permanent hash code associated with this object. May return
   // undefined if not yet created.
-  static inline Object GetHash(Tagged<Object> obj);
+  static inline Tagged<Object> GetHash(Tagged<Object> obj);
 
   // Returns the permanent hash code associated with this object depending on
   // the actual object type. May create and store a hash code if needed and none
   // exists.
-  V8_EXPORT_PRIVATE static Smi GetOrCreateHash(Tagged<Object> obj,
-                                               Isolate* isolate);
+  V8_EXPORT_PRIVATE static Tagged<Smi> GetOrCreateHash(Tagged<Object> obj,
+                                                       Isolate* isolate);
 
   // Checks whether this object has the same value as the given one.  This
   // function is implemented according to ES5, section 9.12 and can be used
   // to implement the Object.is function.
-  V8_EXPORT_PRIVATE static bool SameValue(Tagged<Object> obj, Object other);
+  V8_EXPORT_PRIVATE static bool SameValue(Tagged<Object> obj,
+                                          Tagged<Object> other);
 
   // A part of SameValue which handles Number vs. Number case.
   // Treats NaN == NaN and +0 != -0.
@@ -585,16 +449,16 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
   // +0 and -0 are treated equal. Everything else is the same as SameValue.
   // This function is implemented according to ES6, section 7.2.4 and is used
   // by ES6 Map and Set.
-  static bool SameValueZero(Tagged<Object> obj, Object other);
+  static bool SameValueZero(Tagged<Object> obj, Tagged<Object> other);
 
   // ES6 section 9.4.2.3 ArraySpeciesCreate (part of it)
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> ArraySpeciesConstructor(
-      Isolate* isolate, Handle<Object> original_array);
+  V8_WARN_UNUSED_RESULT static MaybeDirectHandle<Object>
+  ArraySpeciesConstructor(Isolate* isolate, DirectHandle<JSAny> original_array);
 
   // ES6 section 7.3.20 SpeciesConstructor ( O, defaultConstructor )
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> SpeciesConstructor(
-      Isolate* isolate, Handle<JSReceiver> recv,
-      Handle<JSFunction> default_ctor);
+  V8_WARN_UNUSED_RESULT static MaybeDirectHandle<Object> SpeciesConstructor(
+      Isolate* isolate, DirectHandle<JSReceiver> recv,
+      DirectHandle<JSFunction> default_ctor);
 
   // Tries to convert an object to an array length. Returns true and sets the
   // output parameter if it succeeds.
@@ -625,39 +489,51 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
   // Verify a pointer is a valid (non-InstructionStream) object pointer.
   // When V8_EXTERNAL_CODE_SPACE is enabled InstructionStream objects are
   // not allowed.
-  static void VerifyPointer(Isolate* isolate, Object p);
+  static void VerifyPointer(Isolate* isolate, Tagged<Object> p);
+  // Verify a pointer is a valid (non-InstructionStream) object pointer,
+  // potentially a weak one.
+  // When V8_EXTERNAL_CODE_SPACE is enabled InstructionStream objects are
+  // not allowed.
+  static void VerifyMaybeObjectPointer(Isolate* isolate, Tagged<MaybeObject> p);
   // Verify a pointer is a valid object pointer.
   // InstructionStream objects are allowed regardless of the
   // V8_EXTERNAL_CODE_SPACE mode.
-  static void VerifyAnyTagged(Isolate* isolate, Object p);
+  static void VerifyAnyTagged(Isolate* isolate, Tagged<Object> p);
 #endif
-
-  inline static constexpr Object cast(Object object) { return object; }
-  inline static constexpr Object unchecked_cast(Object object) {
-    return object;
-  }
 
   // Layout description.
   static const int kHeaderSize = 0;  // Object does not take up any space.
 
   // For use with std::unordered_set.
   struct Hasher {
-    size_t operator()(const Object o) const {
+    size_t operator()(const Tagged<Object> o) const {
       return std::hash<v8::internal::Address>{}(static_cast<Tagged_t>(o.ptr()));
     }
   };
 
-  // For use with std::unordered_set/unordered_map when using both
-  // InstructionStream and non-InstructionStream objects as keys.
+  // For use with std::unordered_set/unordered_map when one of the objects may
+  // be located outside the main pointer compression cage, for example in
+  // trusted space. In this case, we must use full pointer comparison.
   struct KeyEqualSafe {
-    bool operator()(const Object a, const Object b) const {
+    bool operator()(const Tagged<Object> a, const Tagged<Object> b) const {
       return a.SafeEquals(b);
     }
   };
 
   // For use with std::map.
   struct Comparer {
-    bool operator()(const Object a, const Object b) const { return a < b; }
+    bool operator()(const Tagged<Object> a, const Tagged<Object> b) const {
+      return a < b;
+    }
+  };
+
+  // Same as above, but can be used when one of the objects may be located
+  // outside of the main pointer compression cage, for example in trusted
+  // space. In this case, we must use full pointer comparison.
+  struct FullPtrComparer {
+    bool operator()(const Tagged<Object> a, const Tagged<Object> b) const {
+      return a.ptr() < b.ptr();
+    }
   };
 
   // If the receiver is the JSGlobalObject, the store was contextual. In case
@@ -669,29 +545,22 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
 
   // Returns an equivalent value that's safe to share across Isolates if
   // possible. Acts as the identity function when value->IsShared().
-  static inline MaybeHandle<Object> Share(
-      Isolate* isolate, Handle<Object> value,
+  template <typename T, template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<T>, DirectHandle<T>>)
+  static inline typename HandleType<Object>::MaybeType Share(
+      Isolate* isolate, HandleType<T> value,
       ShouldThrow throw_if_cannot_be_shared);
 
-  static MaybeHandle<Object> ShareSlow(Isolate* isolate,
-                                       Handle<HeapObject> value,
-                                       ShouldThrow throw_if_cannot_be_shared);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  static typename HandleType<Object>::MaybeType ShareSlow(
+      Isolate* isolate, HandleType<HeapObject> value,
+      ShouldThrow throw_if_cannot_be_shared);
 
   // Whether this Object can be held weakly, i.e. whether it can be used as a
   // key in WeakMap, as a key in WeakSet, as the target of a WeakRef, or as a
   // target or unregister token of a FinalizationRegistry.
   static inline bool CanBeHeldWeakly(Tagged<Object> obj);
-
- protected:
-  struct SkipTypeCheckTag {};
-  explicit constexpr Object(Address ptr, SkipTypeCheckTag) : Object(ptr) {}
-
-  // Static overwrites of TaggedImpl's IsSmi/IsHeapObject, to avoid conflicts
-  // with IsSmi(Tagged<Object>) inside Object subclasses' methods.
-  template <typename T>
-  static bool IsSmi(T obj);
-  template <typename T>
-  static bool IsHeapObject(T obj);
 
  private:
   friend class CompressedObjectSlot;
@@ -700,7 +569,8 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
   friend class StringStream;
 
   // Return the map of the root of object's prototype chain.
-  static Map GetPrototypeChainRootMap(Tagged<Object> obj, Isolate* isolate);
+  static Tagged<Map> GetPrototypeChainRootMap(Tagged<Object> obj,
+                                              Isolate* isolate);
 
   // Returns a non-SMI for JSReceivers, but returns the hash code forp
   // simple objects.  This avoids a double lookup in the cases where
@@ -709,63 +579,68 @@ class Object : public TaggedImpl<HeapObjectReferenceType::STRONG, Address> {
   //
   // Despite its size, this needs to be inlined for performance
   // reasons.
-  static inline Object GetSimpleHash(Object object);
+  static inline Tagged<Object> GetSimpleHash(Tagged<Object> object);
 
   // Helper for SetProperty and SetSuperProperty.
   // Return value is only meaningful if [found] is set to true on return.
   V8_WARN_UNUSED_RESULT static Maybe<bool> SetPropertyInternal(
-      LookupIterator* it, Handle<Object> value, Maybe<ShouldThrow> should_throw,
-      StoreOrigin store_origin, bool* found);
+      LookupIterator* it, DirectHandle<Object> value,
+      Maybe<ShouldThrow> should_throw, StoreOrigin store_origin, bool* found);
 
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Name> ConvertToName(
-      Isolate* isolate, Handle<Object> input);
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> ConvertToPropertyKey(
-      Isolate* isolate, Handle<Object> value);
-  V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static MaybeHandle<String>
-  ConvertToString(Isolate* isolate, Handle<Object> input);
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> ConvertToNumberOrNumeric(
-      Isolate* isolate, Handle<Object> input, Conversion mode);
-  V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static MaybeHandle<Object>
-  ConvertToInteger(Isolate* isolate, Handle<Object> input);
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> ConvertToInt32(
-      Isolate* isolate, Handle<Object> input);
-  V8_WARN_UNUSED_RESULT static MaybeHandle<Object> ConvertToUint32(
-      Isolate* isolate, Handle<Object> input);
-  V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static MaybeHandle<Object>
-  ConvertToLength(Isolate* isolate, Handle<Object> input);
-  V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static MaybeHandle<Object>
-  ConvertToIndex(Isolate* isolate, Handle<Object> input,
-                 MessageTemplate error_index);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  V8_WARN_UNUSED_RESULT static typename HandleType<Name>::MaybeType
+  ConvertToName(Isolate* isolate, HandleType<Object> input);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  V8_WARN_UNUSED_RESULT static typename HandleType<Object>::MaybeType
+  ConvertToPropertyKey(Isolate* isolate, HandleType<Object> value);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) V8_WARN_UNUSED_RESULT static
+      typename HandleType<String>::MaybeType
+      ConvertToString(Isolate* isolate, HandleType<Object> input);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  V8_WARN_UNUSED_RESULT static typename HandleType<Number>::MaybeType
+  ConvertToNumber(Isolate* isolate, HandleType<Object> input);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  V8_WARN_UNUSED_RESULT static typename HandleType<Numeric>::MaybeType
+  ConvertToNumeric(Isolate* isolate, HandleType<Object> input);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) V8_WARN_UNUSED_RESULT static
+      typename HandleType<Number>::MaybeType
+      ConvertToInteger(Isolate* isolate, HandleType<Object> input);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  V8_WARN_UNUSED_RESULT static HandleType<Number>::MaybeType ConvertToInt32(
+      Isolate* isolate, HandleType<Object> input);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  V8_WARN_UNUSED_RESULT static HandleType<Number>::MaybeType ConvertToUint32(
+      Isolate* isolate, HandleType<Object> input);
+  V8_EXPORT_PRIVATE V8_WARN_UNUSED_RESULT static MaybeHandle<Number>
+  ConvertToLength(Isolate* isolate, DirectHandle<Object> input);
+  template <template <typename> typename HandleType>
+    requires(std::is_convertible_v<HandleType<Object>, DirectHandle<Object>>)
+  EXPORT_TEMPLATE_DECLARE(V8_EXPORT_PRIVATE) V8_WARN_UNUSED_RESULT static
+      typename HandleType<Number>::MaybeType
+      ConvertToIndex(Isolate* isolate, HandleType<Object> input,
+                     MessageTemplate error_index);
 };
 
-// TODO(leszeks): Tagged<Object> is not known to be a pointer, so it shouldn't
-// have an operator* or operator->. Remove once all Object member functions
-// are free/static functions.
-constexpr Object Tagged<Object>::operator*() const { return ToRawPtr(); }
-constexpr detail::TaggedOperatorArrowRef<Object> Tagged<Object>::operator->() {
-  return detail::TaggedOperatorArrowRef<Object>{ToRawPtr()};
-}
-
-// Implicit conversions to/from raw pointers
-// TODO(leszeks): Remove once we're using Tagged everywhere.
-// NOLINTNEXTLINE
-constexpr Tagged<Object>::Tagged(Object raw) : TaggedBase(raw.ptr()) {
-  static_assert(kTaggedCanConvertToRawObjects);
-}
-template <typename U, typename>
-// NOLINTNEXTLINE
-constexpr Tagged<Object>::operator U() {
-  static_assert(kTaggedCanConvertToRawObjects);
-  return ToRawPtr();
-}
-
-constexpr Object Tagged<Object>::ToRawPtr() const { return Object(ptr()); }
-
-V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os, const Object& obj);
+V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                           Tagged<Object> obj);
+V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                           Object::Conversion kind);
 
 struct Brief {
-  template <typename TObject>
-  explicit Brief(TObject v) : value{v.ptr()} {}
+  template <HeapObjectReferenceType kRefType>
+  explicit Brief(TaggedImpl<kRefType, Address> v) : value{v.ptr()} {}
+  template <typename T>
+  explicit Brief(T* v) : value{v->ptr()} {}
   // {value} is a tagged heap object reference (weak or strong), equivalent to
   // a MaybeObject's payload. It has a plain Address type to keep #includes
   // lightweight.
@@ -776,7 +651,7 @@ V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os, const Brief& v);
 
 // Objects should never have the weak tag; this variant is for overzealous
 // checking.
-V8_INLINE static bool HasWeakHeapObjectTag(const Object value) {
+V8_INLINE static bool HasWeakHeapObjectTag(const Tagged<Object> value) {
   return HAS_WEAK_HEAP_OBJECT_TAG(value.ptr());
 }
 
@@ -795,27 +670,21 @@ template <HeapObjectReferenceType kRefType, typename StorageType>
 V8_INLINE constexpr bool IsHeapObject(TaggedImpl<kRefType, StorageType> obj) {
   return obj.IsHeapObject();
 }
+template <typename StorageType>
+V8_INLINE constexpr bool IsWeak(
+    TaggedImpl<HeapObjectReferenceType::WEAK, StorageType> obj) {
+  return obj.IsWeak();
+}
 
 // TODO(leszeks): These exist both as free functions and members of Tagged. They
 // probably want to be cleaned up at some point.
-V8_INLINE bool IsSmi(Tagged<Object> obj);
-V8_INLINE bool IsSmi(Tagged<HeapObject> obj);
-V8_INLINE bool IsSmi(Tagged<Smi> obj);
+V8_INLINE bool IsSmi(Tagged<Object> obj) { return obj.IsSmi(); }
+V8_INLINE bool IsSmi(Tagged<HeapObject> obj) { return false; }
+V8_INLINE bool IsSmi(Tagged<Smi> obj) { return true; }
 
-V8_INLINE bool IsHeapObject(Tagged<Object> obj);
-V8_INLINE bool IsHeapObject(Tagged<HeapObject> obj);
-V8_INLINE bool IsHeapObject(Tagged<Smi> obj);
-
-template <typename T>
-// static
-bool Object::IsSmi(T obj) {
-  return i::IsSmi(obj);
-}
-template <typename T>
-// static
-bool Object::IsHeapObject(T obj) {
-  return i::IsHeapObject(obj);
-}
+V8_INLINE bool IsHeapObject(Tagged<Object> obj) { return obj.IsHeapObject(); }
+V8_INLINE bool IsHeapObject(Tagged<HeapObject> obj) { return true; }
+V8_INLINE bool IsHeapObject(Tagged<Smi> obj) { return false; }
 
 V8_INLINE bool IsTaggedIndex(Tagged<Object> obj);
 
@@ -826,12 +695,14 @@ OBJECT_TYPE_LIST(IS_TYPE_FUNCTION_DECL)
 HEAP_OBJECT_TYPE_LIST(IS_TYPE_FUNCTION_DECL)
 IS_TYPE_FUNCTION_DECL(HashTableBase)
 IS_TYPE_FUNCTION_DECL(SmallOrderedHashTable)
+IS_TYPE_FUNCTION_DECL(PropertyDictionary)
 #undef IS_TYPE_FUNCTION_DECL
 V8_INLINE bool IsNumber(Tagged<Object> obj, ReadOnlyRoots roots);
 
 // A wrapper around IsHole to make it easier to distinguish from specific hole
 // checks (e.g. IsTheHole).
 V8_INLINE bool IsAnyHole(Tagged<Object> obj, PtrComprCageBase cage_base);
+V8_INLINE bool IsAnyHole(Tagged<Object> obj);
 
 // Oddball checks are faster when they are raw pointer comparisons, so the
 // isolate/read-only roots overloads should be preferred where possible.
@@ -881,53 +752,25 @@ V8_INLINE bool IsMinusZero(Tagged<Object> obj);
 // - JSSharedArrays
 inline bool IsShared(Tagged<Object> obj);
 
-#ifdef DEBUG
-inline bool IsApiCallResultType(Tagged<Object> obj);
-#endif  // DEBUG
-
 // Prints this object without details.
-// TODO(leszeks): Make these functions work on Tagged<Object>, once there is no
-// implicit conversion between Tagged and Object which makes them ambiguously
-// overload with the TaggedImpl overloads.
-V8_EXPORT_PRIVATE void ShortPrint(Object obj, FILE* out = stdout);
+V8_EXPORT_PRIVATE void ShortPrint(Tagged<Object> obj, FILE* out = stdout);
 
 // Prints this object without details to a message accumulator.
-V8_EXPORT_PRIVATE void ShortPrint(Object obj, StringStream* accumulator);
+V8_EXPORT_PRIVATE void ShortPrint(Tagged<Object> obj,
+                                  StringStream* accumulator);
 
-V8_EXPORT_PRIVATE void ShortPrint(Object obj, std::ostream& os);
-
-inline void ShortPrint(TaggedBase obj, FILE* out = stdout) {
-  static_assert(kTaggedCanConvertToRawObjects);
-  return ShortPrint(Object(obj.ptr()), out);
-}
-inline void ShortPrint(TaggedBase obj, StringStream* accumulator) {
-  static_assert(kTaggedCanConvertToRawObjects);
-  return ShortPrint(Object(obj.ptr()), accumulator);
-}
-inline void ShortPrint(TaggedBase obj, std::ostream& os) {
-  static_assert(kTaggedCanConvertToRawObjects);
-  return ShortPrint(Object(obj.ptr()), os);
-}
+V8_EXPORT_PRIVATE void ShortPrint(Tagged<Object> obj, std::ostream& os);
 
 #ifdef OBJECT_PRINT
 // For our gdb macros, we should perhaps change these in the future.
-V8_EXPORT_PRIVATE void Print(Object obj);
+V8_EXPORT_PRIVATE void Print(Tagged<Object> obj);
 
 // Prints this object with details.
-V8_EXPORT_PRIVATE void Print(Object obj, std::ostream& os);
-
-inline void Print(TaggedBase obj) {
-  static_assert(kTaggedCanConvertToRawObjects);
-  return Print(Object(obj.ptr()));
-}
-inline void Print(TaggedBase obj, std::ostream& os) {
-  static_assert(kTaggedCanConvertToRawObjects);
-  return Print(Object(obj.ptr()), os);
-}
+V8_EXPORT_PRIVATE void Print(Tagged<Object> obj, std::ostream& os);
 
 #else
-inline void Print(Object obj) { ShortPrint(obj); }
-inline void Print(Object obj, std::ostream& os) { ShortPrint(obj, os); }
+inline void Print(Tagged<Object> obj) { ShortPrint(obj); }
+inline void Print(Tagged<Object> obj, std::ostream& os) { ShortPrint(obj, os); }
 #endif
 
 // Heap objects typically have a map pointer in their first word.  However,
@@ -949,10 +792,10 @@ class MapWord {
   // Normal state: the map word contains a map pointer.
 
   // Create a map word from a map pointer.
-  static inline MapWord FromMap(const Map map);
+  static inline MapWord FromMap(const Tagged<Map> map);
 
   // View this map word as a map pointer.
-  inline Map ToMap() const;
+  inline Tagged<Map> ToMap() const;
 
   // Scavenge collection: the map word of live objects in the from space
   // contains a forwarding address (a heap object pointer in the to space).
@@ -962,14 +805,15 @@ class MapWord {
   // when all map words are heap object pointers, i.e. not during a full GC).
   inline bool IsForwardingAddress() const;
 
-  V8_EXPORT_PRIVATE static bool IsMapOrForwarded(Map map);
+  V8_EXPORT_PRIVATE static bool IsMapOrForwarded(Tagged<Map> map);
 
   // Create a map word from a forwarding address.
-  static inline MapWord FromForwardingAddress(HeapObject map_word_host,
-                                              HeapObject object);
+  static inline MapWord FromForwardingAddress(Tagged<HeapObject> map_word_host,
+                                              Tagged<HeapObject> object);
 
   // View this map word as a forwarding address.
-  inline HeapObject ToForwardingAddress(HeapObject map_word_host);
+  inline Tagged<HeapObject> ToForwardingAddress(
+      Tagged<HeapObject> map_word_host);
 
   constexpr inline Address ptr() const { return value_; }
 
@@ -1016,6 +860,9 @@ class FixedBodyDescriptor;
 
 template <int start_offset>
 class FlexibleBodyDescriptor;
+
+template <int start_offset, int end_offset, int size>
+class FixedWeakBodyDescriptor;
 
 template <int start_offset>
 class FlexibleWeakBodyDescriptor;

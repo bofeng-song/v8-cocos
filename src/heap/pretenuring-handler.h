@@ -23,7 +23,7 @@ class PretenuringHandler final {
   static constexpr int kInitialFeedbackCapacity = 256;
 
   using PretenuringFeedbackMap =
-      std::unordered_map<AllocationSite, size_t, Object::Hasher>;
+      std::unordered_map<Tagged<AllocationSite>, size_t, Object::Hasher>;
   enum FindMementoMode { kForRuntime, kForGC };
 
   explicit PretenuringHandler(Heap* heap);
@@ -34,7 +34,11 @@ class PretenuringHandler final {
   // If an object has an AllocationMemento trailing it, return it, otherwise
   // return a null AllocationMemento.
   template <FindMementoMode mode>
-  inline AllocationMemento FindAllocationMemento(Map map, HeapObject object);
+  static inline Tagged<AllocationMemento> FindAllocationMemento(
+      Heap* heap, Tagged<Map> map, Tagged<HeapObject> object);
+  template <FindMementoMode mode>
+  static inline Tagged<AllocationMemento> FindAllocationMemento(
+      Heap* heap, Tagged<Map> map, Tagged<HeapObject> object, int object_size);
 
   // ===========================================================================
   // Allocation site tracking. =================================================
@@ -42,8 +46,13 @@ class PretenuringHandler final {
 
   // Updates the AllocationSite of a given {object}. The entry (including the
   // count) is cached on the local pretenuring feedback.
-  inline void UpdateAllocationSite(
-      Map map, HeapObject object, PretenuringFeedbackMap* pretenuring_feedback);
+  static inline void UpdateAllocationSite(
+      Heap* heap, Tagged<Map> map, Tagged<HeapObject> object, int object_size,
+      PretenuringFeedbackMap* pretenuring_feedback);
+  static inline void UpdateAllocationSite(
+      Heap* heap, Tagged<Map> map, Tagged<HeapObject> object,
+      SafeHeapObjectSize object_size,
+      PretenuringFeedbackMap* pretenuring_feedback);
 
   // Merges local pretenuring feedback into the global one. Note that this
   // method needs to be called after evacuation, as allocation sites may be
@@ -55,7 +64,7 @@ class PretenuringHandler final {
   // next collection. Added allocation sites are pretenured independent of
   // their feedback.
   V8_EXPORT_PRIVATE void PretenureAllocationSiteOnNextCollection(
-      AllocationSite site);
+      Tagged<AllocationSite> site);
 
   // ===========================================================================
   // Pretenuring. ==============================================================
@@ -67,7 +76,7 @@ class PretenuringHandler final {
   void ProcessPretenuringFeedback(size_t new_space_capacity_before_gc);
 
   // Removes an entry from the global pretenuring storage.
-  void RemoveAllocationSitePretenuringFeedback(AllocationSite site);
+  void RemoveAllocationSitePretenuringFeedback(Tagged<AllocationSite> site);
 
   bool HasPretenuringFeedback() const {
     return !global_pretenuring_feedback_.empty();

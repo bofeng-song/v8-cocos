@@ -143,7 +143,7 @@ TEST(Unwind_BadState_Fail_CodePagesAPI) {
 // Unwind a middle JS frame (i.e not the JSEntry one).
 TEST(Unwind_BuiltinPCInMiddle_Success_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
   Isolate* i_isolate = reinterpret_cast<Isolate*>(isolate);
 
   JSEntryStubs entry_stubs = isolate->GetJSEntryStubs();
@@ -168,7 +168,7 @@ TEST(Unwind_BuiltinPCInMiddle_Success_CodePagesAPI) {
   register_state.fp = stack;
 
   // Put the current PC inside of a valid builtin.
-  Code builtin = *BUILTIN_CODE(i_isolate, StringEqual);
+  Tagged<Code> builtin = *BUILTIN_CODE(i_isolate, StringEqual);
   const uintptr_t offset = 40;
   CHECK_LT(offset, builtin->instruction_size());
   register_state.pc =
@@ -189,7 +189,7 @@ TEST(Unwind_BuiltinPCInMiddle_Success_CodePagesAPI) {
 // unwinder should be able to unwind to the C++ frame before the JSEntry frame.
 TEST(Unwind_BuiltinPCAtStart_Success_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
   Isolate* i_isolate = reinterpret_cast<Isolate*>(isolate);
 
   JSEntryStubs entry_stubs = isolate->GetJSEntryStubs();
@@ -225,7 +225,7 @@ TEST(Unwind_BuiltinPCAtStart_Success_CodePagesAPI) {
 
   // Put the current PC at the start of a valid builtin, so that we are setting
   // up the frame.
-  Code builtin = *BUILTIN_CODE(i_isolate, StringEqual);
+  Tagged<Code> builtin = *BUILTIN_CODE(i_isolate, StringEqual);
   register_state.pc = reinterpret_cast<void*>(builtin->instruction_start());
 
   bool unwound = v8::Unwinder::TryUnwindV8Frames(
@@ -267,7 +267,7 @@ bool PagesContainsAddress(size_t length, MemoryRange* pages,
 TEST(Unwind_CodeObjectPCInMiddle_Success_CodePagesAPI) {
   v8_flags.allow_natives_syntax = true;
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
   Isolate* i_isolate = reinterpret_cast<Isolate*>(isolate);
   HandleScope scope(i_isolate);
 
@@ -292,11 +292,11 @@ TEST(Unwind_CodeObjectPCInMiddle_Success_CodePagesAPI) {
   CompileRun(foo_source);
   v8::Local<v8::Function> local_foo = v8::Local<v8::Function>::Cast(
       env.local()->Global()->Get(env.local(), v8_str("foo")).ToLocalChecked());
-  Handle<JSFunction> foo =
-      Handle<JSFunction>::cast(v8::Utils::OpenHandle(*local_foo));
+  DirectHandle<JSFunction> foo =
+      Cast<JSFunction>(v8::Utils::OpenDirectHandle(*local_foo));
 
   // Put the current PC inside of the created code object.
-  Code code = foo->code();
+  Tagged<Code> code = foo->code(i_isolate);
   // We don't produce optimized code when run with --no-turbofan and
   // --no-maglev.
   if (!code->is_optimized_code()) return;
@@ -328,7 +328,7 @@ TEST(Unwind_CodeObjectPCInMiddle_Success_CodePagesAPI) {
 // cannot unwind.
 TEST(Unwind_JSEntryBeforeFrame_Fail_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
 
   JSEntryStubs entry_stubs = isolate->GetJSEntryStubs();
   MemoryRange code_pages[1];
@@ -391,7 +391,7 @@ TEST(Unwind_JSEntryBeforeFrame_Fail_CodePagesAPI) {
 // details.
 TEST(Unwind_TwoJSFrames_Success_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
 
   JSEntryStubs entry_stubs = isolate->GetJSEntryStubs();
   MemoryRange code_pages[1];
@@ -445,7 +445,7 @@ TEST(Unwind_TwoJSFrames_Success_CodePagesAPI) {
 // we can't unwind the stack properly.
 TEST(Unwind_JSEntry_Fail_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
   Isolate* i_isolate = reinterpret_cast<Isolate*>(isolate);
 
   JSEntryStubs entry_stubs = isolate->GetJSEntryStubs();
@@ -455,7 +455,7 @@ TEST(Unwind_JSEntry_Fail_CodePagesAPI) {
   CHECK_LE(pages_length, arraysize(code_pages));
   RegisterState register_state;
 
-  Code js_entry = *BUILTIN_CODE(i_isolate, JSEntry);
+  Tagged<Code> js_entry = *BUILTIN_CODE(i_isolate, JSEntry);
   uint8_t* start = reinterpret_cast<uint8_t*>(js_entry->instruction_start());
   register_state.pc = start + 10;
 
@@ -472,7 +472,7 @@ TEST(Unwind_JSEntry_Fail_CodePagesAPI) {
 // stack base, and then with the correct one.
 TEST(Unwind_StackBounds_Basic_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
 
   JSEntryStubs entry_stubs = isolate->GetJSEntryStubs();
   MemoryRange code_pages[1];
@@ -509,7 +509,7 @@ TEST(Unwind_StackBounds_Basic_CodePagesAPI) {
 
 TEST(Unwind_StackBounds_WithUnwinding_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
 
   JSEntryStubs entry_stubs = isolate->GetJSEntryStubs();
   MemoryRange code_pages[1];
@@ -580,7 +580,7 @@ TEST(PCIsInV8_BadState_Fail_CodePagesAPI) {
 
 TEST(PCIsInV8_ValidStateNullPC_Fail_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
 
   void* pc = nullptr;
 
@@ -610,7 +610,7 @@ void TestRangeBoundaries(size_t pages_length, MemoryRange* code_pages,
 
 TEST(PCIsInV8_InAllCodePages_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
 
   MemoryRange code_pages[v8::Isolate::kMinCodePagesBufferSize];
   size_t pages_length =
@@ -629,7 +629,7 @@ TEST(PCIsInV8_InAllCodePages_CodePagesAPI) {
 // the CodeRange or EmbeddedCodeRange contain JSEntry.
 TEST(PCIsInV8_InJSEntryRange_CodePagesAPI) {
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
   Isolate* i_isolate = reinterpret_cast<Isolate*>(isolate);
 
   MemoryRange code_pages[v8::Isolate::kMinCodePagesBufferSize];
@@ -637,7 +637,7 @@ TEST(PCIsInV8_InJSEntryRange_CodePagesAPI) {
       isolate->CopyCodePages(arraysize(code_pages), code_pages);
   CHECK_LE(pages_length, arraysize(code_pages));
 
-  Code js_entry = *BUILTIN_CODE(i_isolate, JSEntry);
+  Tagged<Code> js_entry = *BUILTIN_CODE(i_isolate, JSEntry);
   uint8_t* start = reinterpret_cast<uint8_t*>(js_entry->instruction_start());
   size_t length = js_entry->instruction_size();
 
@@ -654,12 +654,12 @@ TEST(PCIsInV8_InJSEntryRange_CodePagesAPI) {
 TEST(PCIsInV8_LargeCodeObject_CodePagesAPI) {
   v8_flags.allow_natives_syntax = true;
   LocalContext env;
-  v8::Isolate* isolate = env->GetIsolate();
+  v8::Isolate* isolate = env.isolate();
   Isolate* i_isolate = reinterpret_cast<Isolate*>(isolate);
   HandleScope scope(i_isolate);
 
   // Create a big function that ends up in CODE_LO_SPACE.
-  const int instruction_size = Page::kPageSize + 1;
+  const int instruction_size = PageMetadata::kPageSize + 1;
   CHECK_GT(instruction_size, MemoryChunkLayout::MaxRegularCodeObjectSize());
   std::unique_ptr<uint8_t[]> instructions(new uint8_t[instruction_size]);
 
@@ -672,8 +672,8 @@ TEST(PCIsInV8_LargeCodeObject_CodePagesAPI) {
   desc.unwinding_info = nullptr;
   desc.unwinding_info_size = 0;
   desc.origin = nullptr;
-  Handle<Code> foo_code =
-      Factory::CodeBuilder(i_isolate, desc, CodeKind::WASM_FUNCTION).Build();
+  DirectHandle<Code> foo_code =
+      Factory::CodeBuilder(i_isolate, desc, CodeKind::FOR_TESTING).Build();
 
   CHECK(i_isolate->heap()->InSpace(foo_code->instruction_stream(),
                                    CODE_LO_SPACE));

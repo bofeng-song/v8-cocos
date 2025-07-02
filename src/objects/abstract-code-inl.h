@@ -6,6 +6,8 @@
 #define V8_OBJECTS_ABSTRACT_CODE_INL_H_
 
 #include "src/objects/abstract-code.h"
+// Include the non-inl header before the rest of the headers.
+
 #include "src/objects/bytecode-array-inl.h"
 #include "src/objects/code-inl.h"
 #include "src/objects/instance-type-inl.h"
@@ -17,10 +19,9 @@ namespace v8 {
 namespace internal {
 
 OBJECT_CONSTRUCTORS_IMPL(AbstractCode, HeapObject)
-CAST_ACCESSOR(AbstractCode)
 
 int AbstractCode::InstructionSize(PtrComprCageBase cage_base) {
-  Map map_object = map(cage_base);
+  Tagged<Map> map_object = map(cage_base);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->instruction_size();
   } else {
@@ -29,24 +30,9 @@ int AbstractCode::InstructionSize(PtrComprCageBase cage_base) {
   }
 }
 
-ByteArray AbstractCode::SourcePositionTableInternal(
-    PtrComprCageBase cage_base) {
-  Map map_object = map(cage_base);
-  if (InstanceTypeChecker::IsCode(map_object)) {
-    Code code = GetCode();
-    if (!code->has_instruction_stream()) {
-      return GetReadOnlyRoots().empty_byte_array();
-    }
-    return code->source_position_table(cage_base);
-  } else {
-    DCHECK(InstanceTypeChecker::IsBytecodeArray(map_object));
-    return GetBytecodeArray()->SourcePositionTable(cage_base);
-  }
-}
-
-ByteArray AbstractCode::SourcePositionTable(Isolate* isolate,
-                                            SharedFunctionInfo sfi) {
-  Map map_object = map(isolate);
+Tagged<TrustedByteArray> AbstractCode::SourcePositionTable(
+    Isolate* isolate, Tagged<SharedFunctionInfo> sfi) {
+  Tagged<Map> map_object = map(isolate);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->SourcePositionTable(isolate, sfi);
   } else {
@@ -56,7 +42,7 @@ ByteArray AbstractCode::SourcePositionTable(Isolate* isolate,
 }
 
 int AbstractCode::SizeIncludingMetadata(PtrComprCageBase cage_base) {
-  Map map_object = map(cage_base);
+  Tagged<Map> map_object = map(cage_base);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->SizeIncludingMetadata();
   } else {
@@ -66,7 +52,7 @@ int AbstractCode::SizeIncludingMetadata(PtrComprCageBase cage_base) {
 }
 
 Address AbstractCode::InstructionStart(PtrComprCageBase cage_base) {
-  Map map_object = map(cage_base);
+  Tagged<Map> map_object = map(cage_base);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->instruction_start();
   } else {
@@ -76,19 +62,19 @@ Address AbstractCode::InstructionStart(PtrComprCageBase cage_base) {
 }
 
 Address AbstractCode::InstructionEnd(PtrComprCageBase cage_base) {
-  Map map_object = map(cage_base);
+  Tagged<Map> map_object = map(cage_base);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->instruction_end();
   } else {
     DCHECK(InstanceTypeChecker::IsBytecodeArray(map_object));
-    BytecodeArray bytecode_array = GetBytecodeArray();
+    Tagged<BytecodeArray> bytecode_array = GetBytecodeArray();
     return bytecode_array->GetFirstBytecodeAddress() + bytecode_array->length();
   }
 }
 
 bool AbstractCode::contains(Isolate* isolate, Address inner_pointer) {
   PtrComprCageBase cage_base(isolate);
-  Map map_object = map(cage_base);
+  Tagged<Map> map_object = map(cage_base);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->contains(isolate, inner_pointer);
   } else {
@@ -99,7 +85,7 @@ bool AbstractCode::contains(Isolate* isolate, Address inner_pointer) {
 }
 
 CodeKind AbstractCode::kind(PtrComprCageBase cage_base) {
-  Map map_object = map(cage_base);
+  Tagged<Map> map_object = map(cage_base);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->kind();
   } else {
@@ -109,7 +95,7 @@ CodeKind AbstractCode::kind(PtrComprCageBase cage_base) {
 }
 
 Builtin AbstractCode::builtin_id(PtrComprCageBase cage_base) {
-  Map map_object = map(cage_base);
+  Tagged<Map> map_object = map(cage_base);
   if (InstanceTypeChecker::IsCode(map_object)) {
     return GetCode()->builtin_id();
   } else {
@@ -123,10 +109,10 @@ bool AbstractCode::has_instruction_stream(PtrComprCageBase cage_base) {
   return GetCode()->has_instruction_stream();
 }
 
-Code AbstractCode::GetCode() { return Code::cast(*this); }
+Tagged<Code> AbstractCode::GetCode() { return Cast<Code>(*this); }
 
-BytecodeArray AbstractCode::GetBytecodeArray() {
-  return BytecodeArray::cast(*this);
+Tagged<BytecodeArray> AbstractCode::GetBytecodeArray() {
+  return Cast<BytecodeArray>(*this);
 }
 
 }  // namespace internal

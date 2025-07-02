@@ -37,7 +37,6 @@
 #include "include/v8-locker.h"
 #include "src/base/lazy-instance.h"
 #include "src/base/logging.h"
-#include "src/base/optional.h"
 #include "src/base/platform/condition-variable.h"
 #include "src/base/platform/mutex.h"
 #include "src/base/platform/semaphore.h"
@@ -112,6 +111,7 @@ CcTest::CcTest(TestFunction* callback, const char* file, const char* name,
 }
 
 void CcTest::Run(const char* snapshot_directory) {
+  // TODO(350324877): Investigate enabling sandbox hardware support here.
   v8::V8::InitializeICUDefaultLocation(snapshot_directory);
   std::unique_ptr<v8::Platform> underlying_default_platform(
       v8::platform::NewDefaultPlatform());
@@ -160,16 +160,7 @@ void CcTest::Run(const char* snapshot_directory) {
 #ifdef DEBUG
   const size_t active_isolates = i::Isolate::non_disposed_isolates();
 #endif  // DEBUG
-  {
-#ifdef V8_ENABLE_DIRECT_LOCAL
-    // TODO(v8:13270): This handle scope should not be needed. It will be
-    // removed when the implementation of direct handles is complete and they
-    // can never implicitly be converted to indirect handles.
-    v8::base::Optional<v8::HandleScope> scope;
-    if (initialize_) scope.emplace(isolate_);
-#endif
-    callback_();
-  }
+  callback_();
 #ifdef DEBUG
   // This DCHECK ensures that all Isolates are properly disposed after finishing
   // the test. Stray Isolates lead to stray tasks in the platform which can
@@ -260,17 +251,14 @@ LocalContext::~LocalContext() {
   context_.Reset();
 }
 
-void LocalContext::Initialize(v8::Isolate* isolate,
-                              v8::ExtensionConfiguration* extensions,
+void LocalContext::Initialize(v8::ExtensionConfiguration* extensions,
                               v8::Local<v8::ObjectTemplate> global_template,
                               v8::Local<v8::Value> global_object) {
-  v8::HandleScope scope(isolate);
+  v8::HandleScope scope(isolate_);
   v8::Local<v8::Context> context =
-      v8::Context::New(isolate, extensions, global_template, global_object);
-  context_.Reset(isolate, context);
+      v8::Context::New(isolate_, extensions, global_template, global_object);
+  context_.Reset(isolate_, context);
   context->Enter();
-  // We can't do this later perhaps because of a fatal error.
-  isolate_ = isolate;
 }
 
 // This indirection is needed because HandleScopes cannot be heap-allocated, and
@@ -291,9 +279,8 @@ InitializedHandleScope::InitializedHandleScope(i::Isolate* isolate)
 
 InitializedHandleScope::~InitializedHandleScope() = default;
 
-HandleAndZoneScope::HandleAndZoneScope(bool support_zone_compression)
-    : main_zone_(
-          new i::Zone(&allocator_, ZONE_NAME, support_zone_compression)) {}
+HandleAndZoneScope::HandleAndZoneScope()
+    : main_zone_(new i::Zone(&allocator_, ZONE_NAME)) {}
 
 HandleAndZoneScope::~HandleAndZoneScope() = default;
 
@@ -310,7 +297,7 @@ i::Handle<i::JSFunction> Optimize(i::Handle<i::JSFunction> function,
   CHECK_NOT_NULL(zone);
 
   i::OptimizedCompilationInfo info(zone, isolate, shared, function,
-                                   i::CodeKind::TURBOFAN);
+                                   i::CodeKind::TURBOFAN_JS);
 
   if (flags & ~i::OptimizedCompilationInfo::kInlining) UNIMPLEMENTED();
   if (flags & i::OptimizedCompilationInfo::kInlining) {
@@ -320,10 +307,10 @@ i::Handle<i::JSFunction> Optimize(i::Handle<i::JSFunction> function,
   CHECK(info.shared_info()->HasBytecodeArray());
   i::JSFunction::EnsureFeedbackVector(isolate, function, &is_compiled_scope);
 
-  i::Handle<i::Code> code =
+  i::DirectHandle<i::Code> code =
       i::compiler::Pipeline::GenerateCodeForTesting(&info, isolate)
           .ToHandleChecked();
-  function->set_code(*code, v8::kReleaseStore);
+  function->UpdateOptimizedCode(isolate, *code);
   return function;
 }
 #endif  // V8_ENABLE_TURBOFAN
@@ -433,28 +420,28 @@ int TestPlatform::NumberOfWorkerThreads() {
 }
 
 std::shared_ptr<v8::TaskRunner> TestPlatform::GetForegroundTaskRunner(
-    v8::Isolate* isolate) {
-  return CcTest::default_platform()->GetForegroundTaskRunner(isolate);
+    v8::Isolate* isolate, v8::TaskPriority priority) {
+  return CcTest::default_platform()->GetForegroundTaskRunner(isolate, priority);
 }
 
-void TestPlatform::CallOnWorkerThread(std::unique_ptr<v8::Task> task) {
-  CcTest::default_platform()->CallOnWorkerThread(std::move(task));
+void TestPlatform::PostTaskOnWorkerThreadImpl(
+    v8::TaskPriority priority, std::unique_ptr<v8::Task> task,
+    const v8::SourceLocation& location) {
+  CcTest::default_platform()->PostTaskOnWorkerThread(priority, std::move(task));
 }
 
-void TestPlatform::CallDelayedOnWorkerThread(std::unique_ptr<v8::Task> task,
-                                             double delay_in_seconds) {
-  CcTest::default_platform()->CallDelayedOnWorkerThread(std::move(task),
-                                                        delay_in_seconds);
+void TestPlatform::PostDelayedTaskOnWorkerThreadImpl(
+    v8::TaskPriority priority, std::unique_ptr<v8::Task> task,
+    double delay_in_seconds, const v8::SourceLocation& location) {
+  CcTest::default_platform()->PostDelayedTaskOnWorkerThread(
+      priority, std::move(task), delay_in_seconds);
 }
 
-std::unique_ptr<v8::JobHandle> TestPlatform::PostJob(
-    v8::TaskPriority priority, std::unique_ptr<v8::JobTask> job_task) {
-  return CcTest::default_platform()->PostJob(priority, std::move(job_task));
-}
-
-std::unique_ptr<v8::JobHandle> TestPlatform::CreateJob(
-    v8::TaskPriority priority, std::unique_ptr<v8::JobTask> job_task) {
-  return CcTest::default_platform()->CreateJob(priority, std::move(job_task));
+std::unique_ptr<v8::JobHandle> TestPlatform::CreateJobImpl(
+    v8::TaskPriority priority, std::unique_ptr<v8::JobTask> job_task,
+    const v8::SourceLocation& location) {
+  return CcTest::default_platform()->CreateJob(priority, std::move(job_task),
+                                               location);
 }
 
 double TestPlatform::MonotonicallyIncreasingTime() {
@@ -471,6 +458,10 @@ bool TestPlatform::IdleTasksEnabled(v8::Isolate* isolate) {
 
 v8::TracingController* TestPlatform::GetTracingController() {
   return CcTest::default_platform()->GetTracingController();
+}
+
+v8::ThreadIsolatedAllocator* TestPlatform::GetThreadIsolatedAllocator() {
+  return CcTest::default_platform()->GetThreadIsolatedAllocator();
 }
 
 namespace {

@@ -20,6 +20,7 @@ using v8::IdleTask;
 using v8::Isolate;
 using v8::Task;
 
+#include "src/base/platform/platform.h"
 #include "src/utils/allocation.h"
 #include "src/zone/accounting-allocator.h"
 
@@ -56,7 +57,7 @@ size_t GetHugeMemoryAmount() {
   if (!huge_memory) {
     for (int i = 0; i < 100; i++) {
       huge_memory |=
-          v8::base::bit_cast<size_t>(v8::internal::GetRandomMmapAddr());
+          reinterpret_cast<size_t>(v8::internal::GetRandomMmapAddr());
     }
     // Make it larger than the available address space.
     huge_memory *= 2;
@@ -67,21 +68,23 @@ size_t GetHugeMemoryAmount() {
 
 void OnMallocedOperatorNewOOM(const char* location, const char* message) {
   // exit(0) if the OOM callback was called and location matches expectation.
-  if (DidCallOnCriticalMemoryPressure())
-    exit(strcmp(location, "Malloced operator new"));
-  exit(1);
+  CHECK(DidCallOnCriticalMemoryPressure());
+  CHECK_EQ(0, strcmp(location, "Malloced operator new"));
+  v8::base::OS::ExitProcess(0);
 }
 
 void OnNewArrayOOM(const char* location, const char* message) {
   // exit(0) if the OOM callback was called and location matches expectation.
-  if (DidCallOnCriticalMemoryPressure()) exit(strcmp(location, "NewArray"));
-  exit(1);
+  CHECK(DidCallOnCriticalMemoryPressure());
+  CHECK_EQ(0, strcmp(location, "NewArray"));
+  v8::base::OS::ExitProcess(0);
 }
 
 void OnAlignedAllocOOM(const char* location, const char* message) {
   // exit(0) if the OOM callback was called and location matches expectation.
-  if (DidCallOnCriticalMemoryPressure()) exit(strcmp(location, "AlignedAlloc"));
-  exit(1);
+  CHECK(DidCallOnCriticalMemoryPressure());
+  CHECK_EQ(0, strcmp(location, "AlignedAlloc"));
+  v8::base::OS::ExitProcess(0);
 }
 
 }  // namespace
@@ -89,9 +92,8 @@ void OnAlignedAllocOOM(const char* location, const char* message) {
 TEST_WITH_PLATFORM(AccountingAllocatorOOM, AllocationPlatform) {
   v8::internal::AccountingAllocator allocator;
   CHECK(!platform.oom_callback_called);
-  const bool support_compression = false;
   v8::internal::Segment* result =
-      allocator.AllocateSegment(GetHugeMemoryAmount(), support_compression);
+      allocator.AllocateSegment(GetHugeMemoryAmount());
   // On a few systems, allocation somehow succeeds.
   CHECK_EQ(result == nullptr, platform.oom_callback_called);
 }
@@ -102,13 +104,12 @@ TEST_WITH_PLATFORM(AccountingAllocatorCurrentAndMax, AllocationPlatform) {
   v8::internal::AccountingAllocator allocator;
   static constexpr size_t kAllocationSizes[] = {51, 231, 27};
   std::vector<v8::internal::Segment*> segments;
-  const bool support_compression = false;
   CHECK_EQ(0, allocator.GetCurrentMemoryUsage());
   CHECK_EQ(0, allocator.GetMaxMemoryUsage());
   size_t expected_current = 0;
   size_t expected_max = 0;
   for (size_t size : kAllocationSizes) {
-    segments.push_back(allocator.AllocateSegment(size, support_compression));
+    segments.push_back(allocator.AllocateSegment(size));
     CHECK_NOT_NULL(segments.back());
     CHECK_LE(size, segments.back()->total_size());
     expected_current += segments.back()->total_size();
@@ -118,7 +119,7 @@ TEST_WITH_PLATFORM(AccountingAllocatorCurrentAndMax, AllocationPlatform) {
   }
   for (auto* segment : segments) {
     expected_current -= segment->total_size();
-    allocator.ReturnSegment(segment, support_compression);
+    allocator.ReturnSegment(segment);
     CHECK_EQ(expected_current, allocator.GetCurrentMemoryUsage());
   }
   CHECK_EQ(expected_max, allocator.GetMaxMemoryUsage());
@@ -132,7 +133,6 @@ TEST_WITH_PLATFORM(MallocedOperatorNewOOM, AllocationPlatform) {
   // On failure, this won't return, since a Malloced::New failure is fatal.
   // In that case, behavior is checked in OnMallocedOperatorNewOOM before exit.
   void* result = v8::internal::Malloced::operator new(GetHugeMemoryAmount());
-  // On a few systems, allocation somehow succeeds.
   CHECK_EQ(result == nullptr, platform.oom_callback_called);
 }
 
@@ -141,8 +141,7 @@ TEST_WITH_PLATFORM(NewArrayOOM, AllocationPlatform) {
   CcTest::isolate()->SetFatalErrorHandler(OnNewArrayOOM);
   // On failure, this won't return, since a NewArray failure is fatal.
   // In that case, behavior is checked in OnNewArrayOOM before exit.
-  int8_t* result = v8::internal::NewArray<int8_t>(GetHugeMemoryAmount());
-  // On a few systems, allocation somehow succeeds.
+  void* result = v8::internal::NewArray<int8_t>(GetHugeMemoryAmount());
   CHECK_EQ(result == nullptr, platform.oom_callback_called);
 }
 
@@ -153,23 +152,22 @@ TEST_WITH_PLATFORM(AlignedAllocOOM, AllocationPlatform) {
   // In that case, behavior is checked in OnAlignedAllocOOM before exit.
   void* result = v8::internal::AlignedAllocWithRetry(
       GetHugeMemoryAmount(), v8::internal::AllocatePageSize());
-  // On a few systems, allocation somehow succeeds.
   CHECK_EQ(result == nullptr, platform.oom_callback_called);
 }
 
 TEST_WITH_PLATFORM(AllocVirtualMemoryOOM, AllocationPlatform) {
   CHECK(!platform.oom_callback_called);
   v8::internal::VirtualMemory result(v8::internal::GetPlatformPageAllocator(),
-                                     GetHugeMemoryAmount(), nullptr);
+                                     GetHugeMemoryAmount());
   // On a few systems, allocation somehow succeeds.
   CHECK_IMPLIES(!result.IsReserved(), platform.oom_callback_called);
 }
 
 TEST_WITH_PLATFORM(AlignedAllocVirtualMemoryOOM, AllocationPlatform) {
   CHECK(!platform.oom_callback_called);
-  v8::internal::VirtualMemory result(v8::internal::GetPlatformPageAllocator(),
-                                     GetHugeMemoryAmount(), nullptr,
-                                     v8::internal::AllocatePageSize());
+  v8::internal::VirtualMemory result(
+      v8::internal::GetPlatformPageAllocator(), GetHugeMemoryAmount(),
+      v8::PageAllocator::AllocationHint(), v8::internal::AllocatePageSize());
   // On a few systems, allocation somehow succeeds.
   CHECK_IMPLIES(!result.IsReserved(), platform.oom_callback_called);
 }
