@@ -54,7 +54,7 @@ jobs:
       - name: set python
         run: |
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
-          python3 ${{ env.DEPOT_TOOLS_PATH }}/bootstrap/bootstrap.py --bootstrap-name=depot_tools
+          python3 ${{ env.DEPOT_TOOLS_PATH }}/bootstrap/bootstrap.py --bootstrap-name=../
 
       - name: Install dsymutil
         run: |
