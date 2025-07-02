@@ -46,6 +46,6 @@ v8_enable_webassembly=true
 use_cxx17=true
 v8_enable_sandbox=false"
 
-gn --root=. gen out/mac --args="${ARGS}"
+gn --root=../ gen out/mac --args="${ARGS}"
 
 ninja -C out/mac v8_monolith d8 -v
