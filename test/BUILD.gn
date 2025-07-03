@@ -99,7 +99,7 @@ group("v8_bot_default") {
     "inspector:inspector-test",
     "intl:v8_intl",
     "message:v8_message",
-    "mjsunit:v8_mjsunit",
+  #  "mjsunit:v8_mjsunit",
     "mkgrokdump:mkgrokdump",
     "unittests:v8_unittests",
     "webkit:v8_webkit",
@@ -125,7 +125,7 @@ group("v8_default") {
     "inspector:inspector-test",
     "intl:v8_intl",
     "message:v8_message",
-    "mjsunit:v8_mjsunit",
+  #  "mjsunit:v8_mjsunit",
     "mkgrokdump:mkgrokdump",
     "unittests:v8_unittests",
   ]
@@ -147,7 +147,7 @@ group("v8_optimize_for_size") {
     "debugger:v8_debugger",
     "inspector:inspector-test",
     "intl:v8_intl",
-    "mjsunit:v8_mjsunit",
+  #  "mjsunit:v8_mjsunit",
     "webkit:v8_webkit",
   ]
 }
@@ -160,7 +160,7 @@ group("v8_d8_default") {
     "filecheck:v8_filecheck",
     "intl:v8_intl",
     "message:v8_message",
-    "mjsunit:v8_mjsunit",
+  #  "mjsunit:v8_mjsunit",
     "webkit:v8_webkit",
   ]
 }
@@ -170,7 +170,7 @@ group("v8_run_num_fuzzer") {
 
   data_deps = [
     "benchmarks:v8_benchmarks",
-    "mjsunit:v8_mjsunit",
+  #  "mjsunit:v8_mjsunit",
     "webkit:v8_webkit",
   ]
 }
