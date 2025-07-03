@@ -47,8 +47,7 @@ enable_rust=false
 v8_enable_temporal_support=false
 v8_enable_fuzztest=false
 v8_enable_sandbox=false
-clang_version=\"17\"
-use_cxx17=true"
+clang_version=17"
 
 gn gen out/mac --args="${ARGS}"
 
