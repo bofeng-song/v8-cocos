@@ -493,7 +493,7 @@ declare_args() {
   # this breaks locally building V8 with ICU support when the file
   # isn't present, which some embedders rely on. This option controls
   # the explicit dependency and allows the build to complete.
-  v8_depend_on_icu_data_file = icu_use_data_file
+  v8_depend_on_icu_data_file = false
 
   # Some fuzzers depend on fuzzing functionality linked into the v8 library.
   # For binary size reasons this functionality is not always available.
