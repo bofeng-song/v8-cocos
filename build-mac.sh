@@ -46,6 +46,7 @@ use_cxx17=true
 build_with_chromium=false
 enable_rust_cxx=false
 v8_enable_temporal_support=false
+v8_enable_fuzztest=false
 v8_enable_sandbox=false"
 
 gn gen out/mac --args="${ARGS}"
