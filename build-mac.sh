@@ -24,8 +24,8 @@ XCODE_DEVELOPER_PATH=$(xcode-select -p)
 
 ARGS="target_cpu=\"${ARCH}\"
 v8_target_cpu=\"${ARCH}\"
-mac_deployment_target=\"10.13\"
-mac_min_system_version=\"10.13\"
+mac_deployment_target=\"12.0\"
+mac_min_system_version=\"12.0\"
 enable_dsyms=false
 use_thin_lto=false
 use_lld=false
