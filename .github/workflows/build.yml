@@ -53,6 +53,7 @@ jobs:
 
       - name: set python
         run: |
+          export DEPOT_TOOLS_UPDATE=0
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
 
