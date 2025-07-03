@@ -43,6 +43,7 @@ treat_warnings_as_errors=false
 symbol_level=0
 v8_enable_webassembly=true
 enable_rust_cxx=false
+enable_rust=false
 v8_enable_temporal_support=false
 v8_enable_fuzztest=false
 v8_enable_sandbox=false
