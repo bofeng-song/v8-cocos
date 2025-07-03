@@ -28,6 +28,7 @@ mac_deployment_target=\"10.13\"
 mac_min_system_version=\"10.13\"
 enable_dsyms=false
 use_thin_lto=false
+use_icu=false
 use_lld=false
 clang_base_path=\"${XCODE_DEVELOPER_PATH}/Toolchains/XcodeDefault.xctoolchain/usr\"
 clang_use_chrome_plugins=false
