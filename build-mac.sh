@@ -28,7 +28,6 @@ mac_deployment_target=\"10.13\"
 mac_min_system_version=\"10.13\"
 enable_dsyms=false
 use_thin_lto=false
-use_icu=false
 use_lld=false
 clang_base_path=\"${XCODE_DEVELOPER_PATH}/Toolchains/XcodeDefault.xctoolchain/usr\"
 clang_use_chrome_plugins=false
@@ -44,6 +43,7 @@ treat_warnings_as_errors=false
 symbol_level=0
 v8_enable_webassembly=true
 use_cxx17=true
+icu_use_data_file=false
 v8_enable_sandbox=false"
 
 gn gen out/mac --args="${ARGS}"

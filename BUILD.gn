@@ -12,7 +12,9 @@ import("//build/config/riscv.gni")
 import("//build/config/rust.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build_overrides/build.gni")
-# import("//third_party/icu/config.gni")
+if (v8_enable_i18n_support) {
+  import("//third_party/icu/config.gni")
+}
 
 import("gni/snapshot_toolchain.gni")
 import("gni/v8.gni")
@@ -3945,7 +3947,6 @@ v8_header_set("v8_internal_headers") {
     "src/ic/stub-cache.h",
     "src/init/bootstrapper.h",
     "src/init/heap-symbols.h",
-    "src/init/icu_util.h",
     "src/init/isolate-group.h",
     "src/init/setup-isolate.h",
     "src/init/startup-data-util.h",
@@ -4408,6 +4409,10 @@ v8_header_set("v8_internal_headers") {
     "third_party/siphash/halfsiphash.h",
     "third_party/utf8-decoder/utf8-decoder.h",
   ]
+
+  if (v8_enable_i18n_support) {
+    sources += [ "src/init/icu_util.h" ]
+  }
 
   if (v8_enable_snapshot_compression) {
     sources += [ "src/snapshot/snapshot-compression.h" ]
