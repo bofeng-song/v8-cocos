@@ -42,11 +42,12 @@ v8_enable_i18n_support=false
 treat_warnings_as_errors=false
 symbol_level=0
 v8_enable_webassembly=true
-use_cxx17=true
 enable_rust_cxx=false
 v8_enable_temporal_support=false
 v8_enable_fuzztest=false
-v8_enable_sandbox=false"
+v8_enable_sandbox=false
+clang_version=\"17\"
+use_cxx17=true"
 
 gn gen out/mac --args="${ARGS}"
 
