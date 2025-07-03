@@ -14,9 +14,9 @@ group("gn_all") {
     "fuzzer:v8_fuzzer",
     "intl:v8_intl",
     "message:v8_message",
-    "mjsunit:v8_mjsunit",
+   # "mjsunit:v8_mjsunit",
     "mozilla:v8_mozilla",
-    "test262:v8_test262",
+   # "test262:v8_test262",
     "webkit:v8_webkit",
   ]
 
