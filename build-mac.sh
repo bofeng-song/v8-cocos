@@ -44,6 +44,7 @@ symbol_level=0
 v8_enable_webassembly=true
 use_cxx17=true
 build_with_chromium=false
+enable_rust_cxx=false
 v8_enable_sandbox=false"
 
 gn gen out/mac --args="${ARGS}"
