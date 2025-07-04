@@ -394,7 +394,8 @@ jobs:
           
           ./build-android.sh ${{ matrix.arch }}
         env:
-          NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          NDK_ROOT_R21: ${{ steps.setup-ndk.outputs.ndk-path }}
+          NDK_ROOT_R26: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Copy to dist folder
         run: |
