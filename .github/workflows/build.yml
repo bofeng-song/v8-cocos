@@ -356,7 +356,7 @@ jobs:
 
       - name: Build ${{ matrix.arch }}
         run: |
-          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$r
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           which gn
           CURRENT_DIR=$(pwd)
           
