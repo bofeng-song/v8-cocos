@@ -298,19 +298,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install NDK r21e
+      - name: Install NDK r28b
         uses: nttld/setup-ndk@v1
-        id: setup-ndk-r21e
+        id: setup-ndk-r28b
         with:
-          ndk-version: r21e
-          add-to-path: false
-          local-cache: true
-
-      - name: Install NDK r26
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk-r26
-        with:
-          ndk-version: r26
+          ndk-version: r28b
           add-to-path: false
           local-cache: true
 
@@ -365,14 +357,14 @@ jobs:
 
       - name: Build ${{ matrix.arch }}
         run: |
-          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$r
           which gn
           CURRENT_DIR=$(pwd)
           
           ./build-android.sh ${{ matrix.arch }}
         env:
-          NDK_ROOT_R21: ${{ steps.setup-ndk-r21e.outputs.ndk-path }}
-          NDK_ROOT_R26: ${{ steps.setup-ndk-r26.outputs.ndk-path }}
+          NDK_ROOT_R21: ${{ steps.setup-ndk-r28b.outputs.ndk-path }}
+          NDK_ROOT_R26: ${{ steps.setup-ndk-r28b.outputs.ndk-path }}
 
       - name: Copy to dist folder
         run: |
@@ -700,7 +692,7 @@ jobs:
         run: |
           echo "${{ env.DEPOT_TOOLS_PATH }}"
           ls -l ${{ env.DEPOT_TOOLS_PATH }}
-          
+
       - name: set python
         run: |
           export DEPOT_TOOLS_UPDATE=0
