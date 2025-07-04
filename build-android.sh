@@ -28,6 +28,7 @@ target_cpu=\"${ARCH}\"
 v8_target_cpu=\"${ARCH}\"
 use_thin_lto=false
 use_lld=true
+target_os=android
 clang_use_chrome_plugins=false
 chrome_pgo_phase=0
 is_component_build=false
