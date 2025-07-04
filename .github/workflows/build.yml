@@ -338,7 +338,7 @@ jobs:
         run: |
           echo "${{ env.DEPOT_TOOLS_PATH }}"
           echo "${{ steps.setup-ndk.outputs.ndk-path }}"
-          ls -l "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/19"
+          ls -l "${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/19/lib/x86_64-unknown-linux-gnu"
 
       - name: set python
         run: |
