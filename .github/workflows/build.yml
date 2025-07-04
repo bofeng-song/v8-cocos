@@ -25,7 +25,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Select XCode Version
         uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd
@@ -83,7 +83,7 @@ jobs:
           cp -r ./include ./dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: v8-mac-${{ matrix.arch }}
           path: ./dist
@@ -141,7 +141,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Select XCode Version
         uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd
@@ -211,7 +211,7 @@ jobs:
           cp -r ./include ./dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: v8-ios-${{ matrix.arch }}
           path: ./dist
@@ -306,7 +306,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install NDK r28b
         uses: nttld/setup-ndk@v1
@@ -394,7 +394,7 @@ jobs:
           cp -r ./include ./dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: v8-android-${{ matrix.arch }}
           path: ./dist
@@ -471,7 +471,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: actions/setup-python@v4
         with:
@@ -544,7 +544,7 @@ jobs:
           cp -r ./include ./dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: v8-windows-${{ matrix.arch }}-${{ matrix.build_type }}
           path: ./dist
@@ -631,7 +631,7 @@ jobs:
             echo "/usr/lib/x86_64-linux-gnu doesn't not exist."
           fi
           
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
         id: setup-jdk
         with:
@@ -787,7 +787,7 @@ jobs:
           cp -r ./include ./dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: v8-oh-${{ matrix.arch }}
           path: ./dist
@@ -849,7 +849,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Clone DepotTools
         run: |
@@ -917,7 +917,7 @@ jobs:
           cp -r ./include ./dist/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: v8-linux-${{ matrix.arch }}
           path: ./dist
