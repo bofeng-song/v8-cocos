@@ -4,7 +4,7 @@
 
 #include "src/base/platform/memory-protection-key.h"
 
-#if V8_HAS_PKU_JIT_WRITE_PROTECT
+#if V8_HAS_PKU_SUPPORT
 
 #include <sys/mman.h>  // For {mprotect()} protection macros.
 #undef MAP_TYPE  // Conflicts with MAP_TYPE in Torque-generated instance-types.h
@@ -17,15 +17,13 @@
 int pkey_mprotect(void* addr, size_t len, int prot, int pkey) V8_WEAK;
 int pkey_get(int key) V8_WEAK;
 int pkey_set(int, unsigned) V8_WEAK;
+int pkey_alloc(unsigned int, unsigned int) V8_WEAK;
+int pkey_free(int) V8_WEAK;
 
 namespace v8 {
 namespace base {
 
 namespace {
-
-#if DEBUG
-bool pkey_api_initialized = false;
-#endif
 
 int GetProtectionFromMemoryPermission(PageAllocator::Permission permission) {
   // Mappings for PKU are either RWX (for code), no access (for uncommitted
@@ -35,6 +33,8 @@ int GetProtectionFromMemoryPermission(PageAllocator::Permission permission) {
       return PROT_NONE;
     case PageAllocator::kRead:
       return PROT_READ;
+    case PageAllocator::kReadWrite:
+      return PROT_READ | PROT_WRITE;
     case PageAllocator::kReadWriteExecute:
       return PROT_READ | PROT_WRITE | PROT_EXEC;
     default:
@@ -44,22 +44,66 @@ int GetProtectionFromMemoryPermission(PageAllocator::Permission permission) {
 
 }  // namespace
 
-bool MemoryProtectionKey::InitializeMemoryProtectionKeySupport() {
-  // Flip {pkey_api_initialized} (in debug mode) and check the new value.
-  DCHECK_EQ(true, pkey_api_initialized = !pkey_api_initialized);
+// 16 keys on x64, 8 keys on arm64.
+constexpr int kMaxAvailableKeys = 16;
+std::array<bool, kMaxAvailableKeys> g_active_keys = {false};
 
+bool MemoryProtectionKey::HasMemoryProtectionKeyAPIs() {
   if (!pkey_mprotect) return false;
   // If {pkey_mprotect} is available, the others must also be available.
-  CHECK(pkey_get && pkey_set);
+  CHECK(pkey_get && pkey_set && pkey_alloc && pkey_free);
 
   return true;
+}
+
+// static
+bool MemoryProtectionKey::TestKeyAllocation() {
+  if (!HasMemoryProtectionKeyAPIs()) {
+    return false;
+  }
+  int key = AllocateKey();
+  if (key == kNoMemoryProtectionKey) {
+    return false;
+  }
+  FreeKey(key);
+  return true;
+}
+
+// static
+int MemoryProtectionKey::AllocateKey() {
+  if (!pkey_alloc) {
+    return kNoMemoryProtectionKey;
+  }
+
+  int key = pkey_alloc(0, kNoRestrictions);
+  if (key != kNoMemoryProtectionKey) {
+    CHECK_LT(key, kMaxAvailableKeys);
+    DCHECK(!g_active_keys[key]);
+    g_active_keys[key] = true;
+  }
+
+  return key;
+}
+
+// static
+void MemoryProtectionKey::FreeKey(int key) {
+  DCHECK_NE(key, kNoMemoryProtectionKey);
+  DCHECK(g_active_keys[key]);
+  CHECK_EQ(pkey_free(key), 0);
+  g_active_keys[key] = false;
+}
+
+// static
+void MemoryProtectionKey::RegisterExternallyAllocatedKey(int key) {
+  CHECK_LT(key, kMaxAvailableKeys);
+  DCHECK(!g_active_keys[key]);
+  g_active_keys[key] = true;
 }
 
 // static
 bool MemoryProtectionKey::SetPermissionsAndKey(
     base::AddressRegion region, v8::PageAllocator::Permission page_permissions,
     int key) {
-  DCHECK(pkey_api_initialized);
   DCHECK_NE(key, kNoMemoryProtectionKey);
   CHECK_NOT_NULL(pkey_mprotect);
 
@@ -74,7 +118,6 @@ bool MemoryProtectionKey::SetPermissionsAndKey(
 // static
 void MemoryProtectionKey::SetPermissionsForKey(int key,
                                                Permission permissions) {
-  DCHECK(pkey_api_initialized);
   DCHECK_NE(kNoMemoryProtectionKey, key);
 
   // If a valid key was allocated, {pkey_set()} must also be available.
@@ -85,7 +128,6 @@ void MemoryProtectionKey::SetPermissionsForKey(int key,
 
 // static
 MemoryProtectionKey::Permission MemoryProtectionKey::GetKeyPermission(int key) {
-  DCHECK(pkey_api_initialized);
   DCHECK_NE(kNoMemoryProtectionKey, key);
 
   // If a valid key was allocated, {pkey_get()} must also be available.
@@ -97,7 +139,21 @@ MemoryProtectionKey::Permission MemoryProtectionKey::GetKeyPermission(int key) {
   return static_cast<Permission>(permission);
 }
 
+// static
+void MemoryProtectionKey::SetDefaultPermissionsForAllKeysInSignalHandler() {
+  // NOTE: This code MUST be async-signal safe
+
+  // As a future optimization, we could compute the register state first (or
+  // even let g_active_keys already resemble the final register state), and
+  // then perform a single WRPKRU instruction.
+  for (int key = 0; key < kMaxAvailableKeys; key++) {
+    if (g_active_keys[key]) {
+      SetPermissionsForKey(key, kDisableWrite);
+    }
+  }
+}
+
 }  // namespace base
 }  // namespace v8
 
-#endif  // V8_HAS_PKU_JIT_WRITE_PROTECT
+#endif  // V8_HAS_PKU_SUPPORT

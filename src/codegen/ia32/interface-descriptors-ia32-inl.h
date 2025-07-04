@@ -19,8 +19,21 @@ constexpr auto CallInterfaceDescriptor::DefaultRegisterArray() {
 }
 
 constexpr auto CallInterfaceDescriptor::DefaultDoubleRegisterArray() {
-  // xmm0 isn't allocatable.
-  auto registers = DoubleRegisterArray(xmm1, xmm2, xmm3, xmm4, xmm5, xmm6);
+  // xmm7 isn't allocatable.
+  auto registers =
+      DoubleRegisterArray(xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6);
+  return registers;
+}
+
+constexpr auto CallInterfaceDescriptor::DefaultReturnRegisterArray() {
+  auto registers =
+      RegisterArray(kReturnRegister0, kReturnRegister1, kReturnRegister2);
+  return registers;
+}
+
+constexpr auto CallInterfaceDescriptor::DefaultReturnDoubleRegisterArray() {
+  // Padding to have as many double return registers as GP return registers.
+  auto registers = DoubleRegisterArray(kFPReturnRegister0, no_dreg, no_dreg);
   return registers;
 }
 
@@ -64,6 +77,21 @@ constexpr Register KeyedLoadBaselineDescriptor::SlotRegister() { return ecx; }
 
 // static
 constexpr Register KeyedLoadWithVectorDescriptor::VectorRegister() {
+  return no_reg;
+}
+
+// static
+constexpr Register EnumeratedKeyedLoadBaselineDescriptor::EnumIndexRegister() {
+  return ecx;
+}
+
+// static
+constexpr Register EnumeratedKeyedLoadBaselineDescriptor::CacheTypeRegister() {
+  return no_reg;
+}
+
+// static
+constexpr Register EnumeratedKeyedLoadBaselineDescriptor::SlotRegister() {
   return no_reg;
 }
 
@@ -180,6 +208,14 @@ constexpr auto CallFunctionTemplateDescriptor::registers() {
 }
 
 // static
+constexpr auto CallFunctionTemplateGenericDescriptor::registers() {
+  // edx: the function template info
+  // ecx: number of arguments (on the stack)
+  // edi: topmost script-having context
+  return RegisterArray(edx, ecx, edi);
+}
+
+// static
 constexpr auto CallWithSpreadDescriptor::registers() {
   // eax : number of arguments (on the stack)
   // edi : the target to call
@@ -277,12 +313,9 @@ CallApiCallbackOptimizedDescriptor::ActualArgumentsCountRegister() {
   return ecx;
 }
 // static
-constexpr Register CallApiCallbackOptimizedDescriptor::CallDataRegister() {
+constexpr Register
+CallApiCallbackOptimizedDescriptor::FunctionTemplateInfoRegister() {
   return edx;
-}
-// static
-constexpr Register CallApiCallbackOptimizedDescriptor::HolderRegister() {
-  return edi;
 }
 
 // static
@@ -291,12 +324,14 @@ CallApiCallbackGenericDescriptor::ActualArgumentsCountRegister() {
   return ecx;
 }
 // static
-constexpr Register CallApiCallbackGenericDescriptor::CallHandlerInfoRegister() {
-  return edx;
+constexpr Register
+CallApiCallbackGenericDescriptor::TopmostScriptHavingContextRegister() {
+  return eax;
 }
 // static
-constexpr Register CallApiCallbackGenericDescriptor::HolderRegister() {
-  return edi;
+constexpr Register
+CallApiCallbackGenericDescriptor::FunctionTemplateInfoRegister() {
+  return edx;
 }
 
 // static
@@ -320,6 +355,12 @@ constexpr auto InterpreterPushArgsThenConstructDescriptor::registers() {
 }
 
 // static
+constexpr auto ConstructForwardAllArgsDescriptor::registers() {
+  return RegisterArray(edi,   // the constructor
+                       edx);  // the new target
+}
+
+// static
 constexpr auto ResumeGeneratorDescriptor::registers() {
   return RegisterArray(eax,   // the value to pass to the generator
                        edx);  // the JSGeneratorObject to resume
@@ -330,7 +371,7 @@ constexpr auto RunMicrotasksEntryDescriptor::registers() {
   return RegisterArray();
 }
 
-constexpr auto WasmNewJSToWasmWrapperDescriptor::registers() {
+constexpr auto WasmJSToWasmWrapperDescriptor::registers() {
   // Arbitrarily picked register.
   return RegisterArray(edi);
 }

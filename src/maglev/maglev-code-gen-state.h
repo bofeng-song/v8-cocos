@@ -22,6 +22,7 @@ namespace maglev {
 
 class InterpreterFrameState;
 class MaglevAssembler;
+class Graph;
 
 class DeferredCodeInfo {
  public:
@@ -32,13 +33,14 @@ class DeferredCodeInfo {
 class MaglevCodeGenState {
  public:
   MaglevCodeGenState(MaglevCompilationInfo* compilation_info,
-                     MaglevSafepointTableBuilder* safepoint_table_builder)
+                     MaglevSafepointTableBuilder* safepoint_table_builder,
+                     uint32_t max_block_id)
       : compilation_info_(compilation_info),
-        safepoint_table_builder_(safepoint_table_builder) {}
+        safepoint_table_builder_(safepoint_table_builder),
+        real_jump_target_(max_block_id) {}
 
   void set_tagged_slots(int slots) { tagged_slots_ = slots; }
   void set_untagged_slots(int slots) { untagged_slots_ = slots; }
-  void set_needs_no_stack_check() { needs_stack_check_ = false; }
 
   void PushDeferredCode(DeferredCodeInfo* deferred_code) {
     deferred_code_.push_back(deferred_code);
@@ -70,7 +72,11 @@ class MaglevCodeGenState {
   }
   int stack_slots() const { return untagged_slots_ + tagged_slots_; }
   int tagged_slots() const { return tagged_slots_; }
-  bool needs_stack_check() const { return needs_stack_check_; }
+
+  uint16_t parameter_count() const {
+    return compilation_info_->toplevel_compilation_unit()->parameter_count();
+  }
+
   MaglevSafepointTableBuilder* safepoint_table_builder() const {
     return safepoint_table_builder_;
   }
@@ -105,15 +111,12 @@ class MaglevCodeGenState {
         signed_max_unoptimized_frame_height - optimized_frame_height, 0));
     uint32_t max_pushed_argument_bytes =
         static_cast<uint32_t>(max_call_stack_args_ * kSystemPointerSize);
-    if (v8_flags.deopt_to_baseline) {
-      // If we deopt to baseline, we need to be sure that we have enough space
-      // to recreate the unoptimize frame plus arguments to the largest call.
-      return frame_height_delta + max_pushed_argument_bytes;
-    }
     return std::max(frame_height_delta, max_pushed_argument_bytes);
   }
 
   Label* osr_entry() { return &osr_entry_; }
+
+  inline BasicBlock* RealJumpTarget(BasicBlock* block);
 
  private:
   MaglevCompilationInfo* const compilation_info_;
@@ -128,11 +131,13 @@ class MaglevCodeGenState {
   int tagged_slots_ = 0;
   uint32_t max_deopted_stack_size_ = kMaxUInt32;
   uint32_t max_call_stack_args_ = kMaxUInt32;
-  bool needs_stack_check_ = true;
 
   // Entry point label for recursive calls.
   Label entry_label_;
   Label osr_entry_;
+
+  // Cached jump targets skipping empty blocks.
+  std::vector<BasicBlock*> real_jump_target_;
 };
 
 // Some helpers for codegen.
