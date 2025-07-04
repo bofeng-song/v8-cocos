@@ -34,6 +34,7 @@ is_component_build=false
 v8_monolithic=true
 use_custom_libcxx=false
 is_debug=false
+is_android=true
 v8_use_external_startup_data=false
 is_official_build=true
 v8_enable_i18n_support=false
