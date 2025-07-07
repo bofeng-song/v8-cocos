@@ -323,6 +323,9 @@ is_win = current_os == "win" || current_os == "winuwp"
 is_apple = is_ios || is_mac || is_watchos
 is_posix = !is_win && !is_fuchsia
 
+print("bf test is_linux=", is_linux, " is_android=", is_android)
+    print("bf test current_os=", current_os, " target_os=", target_os)
+
 # =============================================================================
 # TARGET DEFAULTS
 # =============================================================================
