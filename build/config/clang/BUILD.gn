@@ -178,8 +178,8 @@ template("clang_lib") {
       _ext = "a"
 
       _clang_lib_dir = "$clang_base_path/lib/clang/$clang_version/lib"
-      print("bf test is_linux: " + is_linux);
-      print("bf test is_android: " + is_android);
+      print("bf test is_linux: " + is_linux)
+      print("bf test is_android: " + is_android)
       if (is_win) {
         _dir = "windows"
         _prefix = ""
