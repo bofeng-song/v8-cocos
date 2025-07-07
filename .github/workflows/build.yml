@@ -48,6 +48,7 @@ jobs:
 
       - name: set python
         run: |
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           export DEPOT_TOOLS_UPDATE=0
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
 
@@ -169,6 +170,7 @@ jobs:
 
       - name: set python
         run: |
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           export DEPOT_TOOLS_UPDATE=0
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
 
@@ -343,6 +345,7 @@ jobs:
       - name: set python
         run: |
           export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
+          export DEPOT_TOOLS_UPDATE=0
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
 
       - name: Install gn
@@ -509,6 +512,7 @@ jobs:
 
       - name: set python
         run: |
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           export DEPOT_TOOLS_UPDATE=0
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
 
@@ -732,6 +736,7 @@ jobs:
 
       - name: set python
         run: |
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           export DEPOT_TOOLS_UPDATE=0
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
 
@@ -891,6 +896,7 @@ jobs:
 
       - name: set python
         run: |
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
           export DEPOT_TOOLS_UPDATE=0
           ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap
 
