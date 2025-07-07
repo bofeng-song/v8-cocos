@@ -42,7 +42,6 @@ v8_enable_i18n_support=false
 treat_warnings_as_errors=false
 symbol_level=0
 v8_enable_webassembly=true
-use_cxx17=true
 clang_version = "17" 
 v8_enable_sandbox=false
 enable_rust_cxx=false
