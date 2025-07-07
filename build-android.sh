@@ -23,7 +23,7 @@ echo "Valid architecture: ${ARCH}"
 echo "NDK_ROOT_R21=${NDK_ROOT_R21}"
 echo "NDK_ROOT_R26=${NDK_ROOT_R26}"
 
-ARGS="target_os=\"android\"
+ARGS="target_os=android
 target_cpu=\"${ARCH}\"
 v8_target_cpu=\"${ARCH}\"
 use_thin_lto=false
