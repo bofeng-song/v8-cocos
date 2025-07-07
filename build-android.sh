@@ -41,7 +41,6 @@ v8_enable_i18n_support=false
 treat_warnings_as_errors=false
 symbol_level=0
 v8_enable_webassembly=true
-use_cxx17=true
 clang_version=\"19\"
 v8_enable_sandbox=false
 android_ndk_root=\"${NDK_ROOT_R21}\"
