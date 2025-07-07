@@ -36,6 +36,7 @@ config("compiler") {
     "ANDROID_NDK_VERSION_ROLL=${android_ndk_version}_1",
   ]
 
+print("bf test android_64bit_current_cpu=", android_64bit_current_cpu)
   if (android_64bit_current_cpu) {
     _max_page_size = 16384
   } else {
