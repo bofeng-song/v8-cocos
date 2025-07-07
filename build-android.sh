@@ -40,7 +40,6 @@ v8_enable_i18n_support=false
 treat_warnings_as_errors=false
 symbol_level=0
 v8_enable_webassembly=true
-clang_version=\"19\"
 v8_enable_sandbox=false
 android_ndk_root=\"${NDK_ROOT_R21}\"
 clang_base_path=\"${NDK_ROOT_R21}/toolchains/llvm/prebuilt/linux-x86_64\"
