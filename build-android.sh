@@ -45,6 +45,7 @@ v8_enable_sandbox=false
 android_ndk_root=\"${NDK_ROOT_R21}\"
 clang_base_path=\"${NDK_ROOT_R21}/toolchains/llvm/prebuilt/linux-x86_64\"
 android_ndk_version=\"r28b\"
+android_ndk_major_version=28
 android_ndk_api_level=21
 use_custom_libunwind=false
 enable_rust_cxx=false
