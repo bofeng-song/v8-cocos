@@ -394,7 +394,7 @@ jobs:
 
       - name: Patch
         run: |
-          sed -i 's@(v8_enable_backtrace || v8_monolithic)@v8_enable_backtrace@g' gni/v8.gni
+          sed -i '279,280d' gni/v8.gni
           echo "Patch v8_enable_backtrace successfully"
           sed -i "s@\"-gsimple-template-names\"@@g" build/config/compiler/BUILD.gn
           sed -i "s@\"-ffile-compilation-dir=.\"@@g" build/config/compiler/BUILD.gn
