@@ -329,6 +329,12 @@ jobs:
           echo "${{ env.DEPOT_TOOLS_PATH }}"
           ls -l ${{ env.DEPOT_TOOLS_PATH }}
 
+      - name: set python
+        run: |
+          export PATH=${{ env.DEPOT_TOOLS_PATH }}:$PATH
+          export DEPOT_TOOLS_UPDATE=0
+          ${{ env.DEPOT_TOOLS_PATH }}/ensure_bootstrap	  
+
       - name: Install gn
         run: |
           wget https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/latest -O ./gn.zip
